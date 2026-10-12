@@ -1,0 +1,22 @@
+# Node / Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python / Backend
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Logs / OS / IDE
+*.log
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
