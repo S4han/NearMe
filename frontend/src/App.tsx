@@ -7,13 +7,29 @@ import {
   type SearchRadius,
 } from './config/categories'
 import MapView from './components/MapView'
+import { DEFAULT_CENTER } from './config/maps'
+import { useGeolocation, type GeoStatus } from './hooks/useGeolocation'
+import type { LatLng } from './types/location'
 
 type BackendStatus = 'checking' | 'ok' | 'error'
+
+const geoMessages: Record<GeoStatus, string> = {
+  idle: '',
+  locating: '현재 위치를 확인하는 중…',
+  granted: '현재 위치를 중심으로 표시합니다.',
+  denied: '위치 권한이 거부되어 제주시청을 중심으로 표시합니다. 지도를 움직여 검색하세요.',
+  unavailable: '현재 위치를 가져올 수 없어 제주시청을 중심으로 표시합니다. 지도를 움직여 검색하세요.',
+}
 
 function App() {
   const [category, setCategory] = useState<PlaceCategory>('restaurant')
   const [radius, setRadius] = useState<SearchRadius>(DEFAULT_RADIUS)
   const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking')
+
+  // 위치 상태 분리: userLocation(GPS) / mapCenter(현재 지도 중심) / searchCenter(검색 확정 좌표)
+  const { position: userLocation, status: geoStatus, locate } = useGeolocation()
+  const [mapCenter, setMapCenter] = useState<LatLng>(DEFAULT_CENTER)
+  const [searchCenter, setSearchCenter] = useState<LatLng | null>(null)
 
   const selected = categories.find((c) => c.id === category)!
 
@@ -27,8 +43,8 @@ function App() {
   }, [])
 
   const handleSearch = () => {
-    // Step 4: 실제 검색 대신 테스트용 알림
-    alert(`${selected.name} / 반경 ${radius / 1000}km`)
+    // 지도 이동만으로는 검색하지 않고, 버튼을 누른 순간의 지도 중심을 검색 기준으로 확정
+    setSearchCenter(mapCenter)
   }
 
   return (
@@ -65,7 +81,22 @@ function App() {
       </h2>
 
       <section className="mb-4">
-        <MapView />
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs text-gray-500">{geoMessages[geoStatus]}</p>
+          <button
+            type="button"
+            onClick={locate}
+            disabled={geoStatus === 'locating'}
+            className="shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700 hover:border-blue-300 disabled:opacity-50"
+          >
+            📍 내 위치
+          </button>
+        </div>
+        <MapView
+          userLocation={userLocation}
+          searchCenter={searchCenter}
+          onCenterChange={setMapCenter}
+        />
       </section>
 
       <section className="mb-4 flex gap-2">
@@ -93,6 +124,15 @@ function App() {
       >
         이 지역 검색
       </button>
+
+      {searchCenter && (
+        <p className="mt-3 rounded-lg bg-white p-3 text-xs text-gray-600 shadow-sm">
+          검색 기준: {searchCenter.lat.toFixed(5)}, {searchCenter.lng.toFixed(5)} · {selected.name} · 반경{' '}
+          {radius / 1000}km
+          <br />
+          <span className="text-gray-400">(실제 장소 검색은 다음 단계에서 연결됩니다)</span>
+        </p>
+      )}
 
       <footer className="mt-auto pt-6 text-center text-xs text-gray-500">
         NearMe Backend:{' '}

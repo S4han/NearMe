@@ -1,12 +1,36 @@
-import { APIProvider, Map } from '@vis.gl/react-google-maps'
+import { useEffect } from 'react'
+import {
+  APIProvider,
+  AdvancedMarker,
+  Map,
+  Pin,
+  useMap,
+  type MapCameraChangedEvent,
+} from '@vis.gl/react-google-maps'
 import {
   GOOGLE_MAPS_API_KEY,
   GOOGLE_MAPS_MAP_ID,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
 } from '../config/maps'
+import type { LatLng } from '../types/location'
 
-function MapView() {
+type MapViewProps = {
+  userLocation: LatLng | null
+  searchCenter: LatLng | null
+  onCenterChange: (center: LatLng) => void
+}
+
+// GPS 위치가 새로 잡히면 지도를 그 위치로 이동
+function PanTo({ target }: { target: LatLng | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (map && target) map.panTo(target)
+  }, [map, target])
+  return null
+}
+
+function MapView({ userLocation, searchCenter, onCenterChange }: MapViewProps) {
   if (!GOOGLE_MAPS_API_KEY) {
     return (
       <div className="flex h-72 flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-500">
@@ -27,9 +51,23 @@ function MapView() {
           defaultCenter={DEFAULT_CENTER}
           defaultZoom={DEFAULT_ZOOM}
           gestureHandling="greedy"
-          disableDefaultUI={false}
+          onCameraChanged={(ev: MapCameraChangedEvent) => onCenterChange(ev.detail.center)}
           style={{ width: '100%', height: '100%' }}
-        />
+        >
+          <PanTo target={userLocation} />
+
+          {userLocation && (
+            <AdvancedMarker position={userLocation} title="내 위치">
+              <div className="h-4 w-4 rounded-full border-2 border-white bg-blue-500 shadow" />
+            </AdvancedMarker>
+          )}
+
+          {searchCenter && (
+            <AdvancedMarker position={searchCenter} title="검색 기준 위치">
+              <Pin background="#dc2626" borderColor="#991b1b" glyphColor="#ffffff" />
+            </AdvancedMarker>
+          )}
+        </Map>
       </APIProvider>
     </div>
   )
