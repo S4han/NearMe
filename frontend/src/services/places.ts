@@ -6,7 +6,6 @@ type SearchParams = {
   center: LatLng
   radius: number
   types: readonly string[]
-  rankBy: 'distance' | 'popularity'
 }
 
 // 비용 통제: 목록 표시에 필요한 최소 필드만 요청한다(Nearby Search Pro 등급).
@@ -24,7 +23,6 @@ export async function searchNearbyPlaces({
   center,
   radius,
   types,
-  rankBy,
 }: SearchParams): Promise<NearbyPlace[]> {
   const { Place, SearchNearbyRankPreference } = await loadPlacesLibrary()
 
@@ -33,13 +31,11 @@ export async function searchNearbyPlaces({
     locationRestriction: { center, radius },
     includedTypes: [...types],
     maxResultCount: MAX_RESULTS,
-    rankPreference:
-      rankBy === 'distance'
-        ? SearchNearbyRankPreference.DISTANCE
-        : SearchNearbyRankPreference.POPULARITY,
+    // 반경 안에서 검색 기준점에 가장 가까운 장소부터 받는다
+    rankPreference: SearchNearbyRankPreference.DISTANCE,
   })
 
-  return places.flatMap((p) => {
+  const result: NearbyPlace[] = places.flatMap((p) => {
     if (!p.location) return []
     const location = { lat: p.location.lat(), lng: p.location.lng() }
     return [
@@ -53,6 +49,8 @@ export async function searchNearbyPlaces({
       },
     ]
   })
+  // 화면에 표시하는 직선거리 기준으로 가까운 순 정렬(목록 번호 = 지도 마커 번호)
+  return result.sort((a, b) => a.distance - b.distance)
 }
 
 // 두 좌표 사이 직선거리(m), 하버사인 공식

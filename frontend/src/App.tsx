@@ -68,7 +68,6 @@ function App() {
         center,
         radius: searchRadius,
         types: cat.googleTypes,
-        rankBy: cat.rankBy,
       })
       if (seq !== searchSeq.current) return
       setPlaces(result)
