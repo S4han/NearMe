@@ -83,10 +83,13 @@ export function directionsUrl(place: NearbyPlace): string {
 
 // Google 지도 장소 페이지 링크(API 호출 없음, 무료). 평점·영업시간·전화번호·리뷰는 Google 지도에서 확인
 export function placeDetailsUrl(place: NearbyPlace): string {
-  // 버스 정류장은 Google placeId가 없으므로 좌표로 연다
+  // 버스 정류장은 Google placeId가 없으므로 좌표로, 공항은 이름으로 연다
   const params =
     place.kind === 'google'
       ? new URLSearchParams({ api: '1', query: place.name, query_place_id: place.id })
-      : new URLSearchParams({ api: '1', query: `${place.location.lat},${place.location.lng}` })
+      : new URLSearchParams({
+          api: '1',
+          query: place.kind === 'airport' ? place.name : `${place.location.lat},${place.location.lng}`,
+        })
   return `https://www.google.com/maps/search/?${params}`
 }

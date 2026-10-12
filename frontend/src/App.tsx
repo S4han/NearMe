@@ -15,6 +15,7 @@ import { LocateIcon, SearchIcon, Spinner } from './components/icons'
 import { useGeolocation, type GeoStatus } from './hooks/useGeolocation'
 import { searchNearbyPlaces } from './services/places'
 import { isInJeju, searchNearbyBusStations } from './services/bus'
+import { AIRPORT_SEARCH_RADIUS, searchNearbyAirports } from './services/flights'
 import type { LatLng } from './types/location'
 import type { NearbyPlace } from './types/place'
 
@@ -70,17 +71,21 @@ function App() {
     try {
       // 제주 안의 버스 정류소는 제주 BIS 데이터(Backend)로 검색: 실시간 도착 정보 연결, Google 비용 없음
       const useJejuBus = searchCategory === 'bus_stop' && BACKEND_ENABLED && isInJeju(center)
+      // 공항은 한국공항공사 공항 목록(Backend)으로 넓은 고정 반경에서 검색: 실시간 출발/도착 현황 연결
+      const useAirports = searchCategory === 'airport' && BACKEND_ENABLED
       const result = useJejuBus
         ? await searchNearbyBusStations(center, searchRadius)
-        : await searchNearbyPlaces({
-            center,
-            radius: searchRadius,
-            types: cat.googleTypes,
-          })
+        : useAirports
+          ? await searchNearbyAirports(center)
+          : await searchNearbyPlaces({
+              center,
+              radius: searchRadius,
+              types: cat.googleTypes,
+            })
       if (seq !== searchSeq.current) return
       // 모든 검색 결과는 검색 기준점에서 가까운 순으로 표시(목록 번호 = 지도 마커 번호)
       setPlaces([...result].sort((a, b) => a.distance - b.distance))
-      setSearchLabel(`${cat.name} · ${searchRadius / 1000}km`)
+      setSearchLabel(`${cat.name} · ${(useAirports ? AIRPORT_SEARCH_RADIUS : searchRadius) / 1000}km`)
       setSearchStatus('done')
     } catch (e) {
       if (seq !== searchSeq.current) return

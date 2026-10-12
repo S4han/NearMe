@@ -1,6 +1,6 @@
 # NearMe
 
-GPS 위치 또는 지도 중심을 기준으로 주변 장소(맛집·카페·편의점·주차장·병원·버스 정류소·관광지)와 교통정보를 찾는 모바일 웹앱.
+GPS 위치 또는 지도 중심을 기준으로 주변 장소(맛집·카페·편의점·주차장·병원·버스 정류소·공항·관광지)와 교통정보를 찾는 모바일 웹앱.
 
 | 영역 | 기술 |
 |---|---|
@@ -83,8 +83,20 @@ npm run dev
 | GET | `/api/bus/stations/nearby?lat=&lng=&radius=1000&limit=20` | 제주 주변 버스 정류장(가까운 순) |
 | GET | `/api/bus/stations/{stationId}/arrivals` | 실시간 도착 예정(20초 캐시) |
 | GET | `/api/bus/stations/{stationId}/routes` | 정류장 경유 노선(1시간 캐시) |
+| GET | `/api/flights/airports/nearby?lat=&lng=&radius=50000` | 주변 공항(가까운 순, 키 불필요) |
+| GET | `/api/flights/airports/{CODE}/status?direction=departure` | 공항 실시간 출발/도착 현황(1분 캐시) |
+| GET | `/api/flights/schedule?dep=CJU&arr=GMP` | 국내선 노선 오늘 시간표·운임(30분 캐시) |
 
-데이터 출처와 응답 필드는 [`docs/jeju-bus-api.md`](docs/jeju-bus-api.md) 참고.
+데이터 출처와 응답 필드는 [`docs/jeju-bus-api.md`](docs/jeju-bus-api.md), [`docs/flight-api.md`](docs/flight-api.md) 참고.
+
+### 항공 운항정보 인증키
+
+공항 현황·시간표는 공공데이터포털(data.go.kr) 인증키가 필요합니다. 포털에서 **한국공항공사_항공기 운항정보**와 **국토교통부_(TAGO)_국내항공운항정보**를 각각 활용신청한 뒤, 발급된 일반 인증키를 환경변수로 넣습니다(저장소에 커밋하지 않음). 키가 없어도 나머지 기능과 주변 공항 검색은 동작합니다.
+
+```powershell
+# 로컬(PowerShell): Backend를 실행할 터미널에서
+$env:DATA_GO_KR_SERVICE_KEY = "발급받은 인증키"
+```
 
 Backend 테스트(PowerShell, `backend` 폴더):
 
@@ -113,6 +125,9 @@ gcloud run deploy nearme-api \
   --max-instances 2 \
   --memory 512Mi
 ```
+
+- 항공 운항정보 인증키는 처음 한 번 등록한다(이후 배포에도 유지됨):
+  `gcloud run services update nearme-api --region asia-east1 --update-env-vars DATA_GO_KR_SERVICE_KEY=발급받은_인증키`
 
 - 배포가 끝나면 표시되는 `Service URL`을 Cloudflare Frontend 빌드 변수 `VITE_API_BASE_URL`에 등록한다.
 - `--min-instances 0`: 요청이 없으면 0대로 줄어 비용이 들지 않는다(대신 첫 요청이 1~3초 느릴 수 있음).
