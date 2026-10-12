@@ -1,4 +1,5 @@
 import { directionsUrl, formatDistance } from '../services/places'
+import PlaceDetailsPanel from './PlaceDetailsPanel'
 import type { NearbyPlace } from '../types/place'
 
 export type SearchStatus = 'idle' | 'loading' | 'done' | 'error'
@@ -70,6 +71,7 @@ function PlaceList({ status, places, label, error, selectedId, onSelect }: Place
               >
                 Google 지도 길찾기 ↗
               </a>
+              {isSelected && <PlaceDetailsPanel placeId={p.id} />}
             </li>
           )
         })}

@@ -1,6 +1,6 @@
 import { MAX_RESULTS } from '../config/maps'
 import type { LatLng } from '../types/location'
-import type { NearbyPlace } from '../types/place'
+import type { NearbyPlace, PlaceDetails } from '../types/place'
 
 type SearchParams = {
   center: LatLng
@@ -13,19 +13,20 @@ type SearchParams = {
 // 평점·영업시간·전화번호 등은 장소 상세 단계에서 필요할 때만 요청한다.
 const FIELDS = ['id', 'displayName', 'location', 'formattedAddress', 'primaryTypeDisplayName']
 
+async function loadPlacesLibrary(): Promise<google.maps.PlacesLibrary> {
+  if (typeof google === 'undefined' || !google.maps?.importLibrary) {
+    throw new Error('지도가 아직 로드되지 않았습니다.')
+  }
+  return (await google.maps.importLibrary('places')) as google.maps.PlacesLibrary
+}
+
 export async function searchNearbyPlaces({
   center,
   radius,
   types,
   rankBy,
 }: SearchParams): Promise<NearbyPlace[]> {
-  if (typeof google === 'undefined' || !google.maps?.importLibrary) {
-    throw new Error('지도가 아직 로드되지 않았습니다.')
-  }
-
-  const { Place, SearchNearbyRankPreference } = (await google.maps.importLibrary(
-    'places',
-  )) as google.maps.PlacesLibrary
+  const { Place, SearchNearbyRankPreference } = await loadPlacesLibrary()
 
   const { places } = await Place.searchNearby({
     fields: FIELDS,
@@ -52,6 +53,30 @@ export async function searchNearbyPlaces({
       },
     ]
   })
+}
+
+// 상세 필드는 Place Details Enterprise 등급이므로 사용자가 '상세정보'를 눌렀을 때만 1회 조회
+const DETAIL_FIELDS = [
+  'rating',
+  'userRatingCount',
+  'regularOpeningHours',
+  'nationalPhoneNumber',
+  'websiteURI',
+  'googleMapsURI',
+]
+
+export async function fetchPlaceDetails(id: string): Promise<PlaceDetails> {
+  const { Place } = await loadPlacesLibrary()
+  const place = new Place({ id })
+  await place.fetchFields({ fields: DETAIL_FIELDS })
+  return {
+    rating: place.rating ?? null,
+    ratingCount: place.userRatingCount ?? null,
+    openingHours: place.regularOpeningHours?.weekdayDescriptions ?? [],
+    phone: place.nationalPhoneNumber ?? '',
+    website: place.websiteURI ?? '',
+    googleMapsUrl: place.googleMapsURI ?? '',
+  }
 }
 
 // 두 좌표 사이 직선거리(m), 하버사인 공식
