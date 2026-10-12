@@ -20,8 +20,10 @@ app.add_middleware(
 )
 
 
+# Cloudflare Python Workers(Pyodide)는 스레드를 지원하지 않는다.
+# FastAPI는 일반 def 경로를 스레드풀에서 실행하므로 모든 경로는 async def로 작성한다.
 @app.get("/api/health")
-def health_check():
+async def health_check():
     return {"status": "ok", "service": "NearMe Backend"}
 
 
