@@ -17,7 +17,7 @@ async def fetch_text(url: str) -> str:
         try:
             resp = await js_fetch(url)
         except Exception as e:  # noqa: BLE001 - JS 쪽 예외 형식이 다양함
-            raise UpstreamError(f"fetch failed: {url}") from e
+            raise UpstreamError(f"fetch failed: {e} ({url})") from e
         if not resp.ok:
             raise UpstreamError(f"HTTP {resp.status}: {url}")
         return await resp.text()
@@ -30,4 +30,4 @@ async def fetch_text(url: str) -> str:
             resp.raise_for_status()
             return resp.text
     except httpx.HTTPError as e:
-        raise UpstreamError(f"{type(e).__name__}: {url}") from e
+        raise UpstreamError(f"{type(e).__name__}: {e} ({url})") from e
