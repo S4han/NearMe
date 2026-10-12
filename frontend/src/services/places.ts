@@ -41,6 +41,7 @@ export async function searchNearbyPlaces({
     return [
       {
         id: p.id,
+        kind: 'google' as const,
         name: p.displayName ?? '(이름 없음)',
         location,
         address: p.formattedAddress ?? '',
@@ -74,18 +75,18 @@ export function directionsUrl(place: NearbyPlace): string {
   const params = new URLSearchParams({
     api: '1',
     destination: `${place.location.lat},${place.location.lng}`,
-    destination_place_id: place.id,
     travelmode: 'transit',
   })
+  if (place.kind === 'google') params.set('destination_place_id', place.id)
   return `https://www.google.com/maps/dir/?${params}`
 }
 
 // Google 지도 장소 페이지 링크(API 호출 없음, 무료). 평점·영업시간·전화번호·리뷰는 Google 지도에서 확인
 export function placeDetailsUrl(place: NearbyPlace): string {
-  const params = new URLSearchParams({
-    api: '1',
-    query: place.name,
-    query_place_id: place.id,
-  })
+  // 버스 정류장은 Google placeId가 없으므로 좌표로 연다
+  const params =
+    place.kind === 'google'
+      ? new URLSearchParams({ api: '1', query: place.name, query_place_id: place.id })
+      : new URLSearchParams({ api: '1', query: `${place.location.lat},${place.location.lng}` })
   return `https://www.google.com/maps/search/?${params}`
 }

@@ -14,6 +14,7 @@ import PlaceList, { type SearchStatus } from './components/PlaceList'
 import { LocateIcon, SearchIcon, Spinner } from './components/icons'
 import { useGeolocation, type GeoStatus } from './hooks/useGeolocation'
 import { searchNearbyPlaces } from './services/places'
+import { isInJeju, searchNearbyBusStations } from './services/bus'
 import type { LatLng } from './types/location'
 import type { NearbyPlace } from './types/place'
 
@@ -64,11 +65,15 @@ function App() {
     setSelectedId(null)
     setSheetOpen(true)
     try {
-      const result = await searchNearbyPlaces({
-        center,
-        radius: searchRadius,
-        types: cat.googleTypes,
-      })
+      // 제주 안의 버스 정류소는 제주 BIS 데이터(Backend)로 검색: 실시간 도착 정보 연결, Google 비용 없음
+      const useJejuBus = searchCategory === 'bus_stop' && BACKEND_ENABLED && isInJeju(center)
+      const result = useJejuBus
+        ? await searchNearbyBusStations(center, searchRadius)
+        : await searchNearbyPlaces({
+            center,
+            radius: searchRadius,
+            types: cat.googleTypes,
+          })
       if (seq !== searchSeq.current) return
       setPlaces(result)
       setSearchLabel(`${cat.name} · ${searchRadius / 1000}km`)

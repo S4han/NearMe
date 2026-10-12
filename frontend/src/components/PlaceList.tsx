@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { directionsUrl, formatDistance, placeDetailsUrl } from '../services/places'
 import type { NearbyPlace } from '../types/place'
+import BusArrivalPanel from './BusArrivalPanel'
 
 export type SearchStatus = 'idle' | 'loading' | 'done' | 'error'
 
@@ -81,6 +82,9 @@ function PlaceList({ status, places, error, selectedId, onSelect }: PlaceListPro
                 </span>
                 {p.typeLabel && <span className="block text-xs text-blue-600">{p.typeLabel}</span>}
                 {p.address && <span className="mt-0.5 block truncate text-xs text-gray-500">{p.address}</span>}
+                {p.kind === 'busStop' && !isSelected && (
+                  <span className="mt-1 block text-xs font-semibold text-blue-600">눌러서 실시간 도착 정보 보기 ›</span>
+                )}
               </span>
             </button>
             <div className="mt-2 flex gap-2 pl-10">
@@ -90,7 +94,7 @@ function PlaceList({ status, places, error, selectedId, onSelect }: PlaceListPro
                 rel="noopener noreferrer"
                 className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200"
               >
-                상세정보
+                {p.kind === 'busStop' ? '지도에서 보기' : '상세정보'}
               </a>
               <a
                 href={directionsUrl(p)}
@@ -101,6 +105,7 @@ function PlaceList({ status, places, error, selectedId, onSelect }: PlaceListPro
                 길찾기
               </a>
             </div>
+            {p.kind === 'busStop' && isSelected && <BusArrivalPanel stationId={p.id} />}
           </li>
         )
       })}
