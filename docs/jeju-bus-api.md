@@ -118,5 +118,18 @@ JTBIS `Bus` 실측: 응답 형식은 문서와 동일(`routeId`, `routeNm`, `rou
 ## Backend 호스팅 결정 (2026-10-12)
 
 - Cloudflare Python Workers(무료): FastAPI가 import 시 난수를 생성해 시작 단계 import 불가 → 요청 시 import하면 CPU 10ms 한도 초과(`Error 1102`). 무료 플랜으로는 운영 불가.
-- 결정: **Google Cloud Run(서울 `asia-northeast3`)** 에 기존 FastAPI 코드를 컨테이너로 배포. 한국 리전이라 제주 공공 API 접속에도 유리.
+- 결정: **Google Cloud Run** 에 기존 FastAPI 코드를 컨테이너로 배포.
 - Linux 컨테이너에서는 `bus.jeju.go.kr` 중간 인증서 보완이 안 될 수 있으며, 이 경우 JTBIS로 자동 전환된다(응답 `source` 필드로 확인).
+
+## Cloud Run 리전별 접속 실측 (2026-10-12)
+
+| 출발지 | JTBIS (busopen, http) | bus.jeju.go.kr (https) |
+|---|---|---|
+| 사용자 PC (국내 가정용) | ✅ | ✅ |
+| Cloud Run 서울 `asia-northeast3` | ❌ `ConnectTimeout` | ❌ `ConnectTimeout` |
+| Cloud Shell (대만 Google IP) | ✅ 200, 2.7s | ❌ 1.2s 실패(인증서 체인 추정) |
+| **Cloud Run 대만 `asia-east1`** | ✅ (자동 전환으로 정상 응답) | ❌ → JTBIS 전환 |
+
+- 서울 리전 Google Cloud IP 대역이 제주 버스 서버에서 차단된 것으로 추정 → **운영은 `asia-east1`**.
+- 운영 환경 응답은 `"source": "jtbis"` → 버스 현재 정류장명·차량번호·저상 여부는 `null`.
+- 예비 경로: 국토교통부 TAGO(apis.data.go.kr)는 Cloud Shell(대만)에서 접속 확인(키 미발급, 제주 지원 여부 미확인).
