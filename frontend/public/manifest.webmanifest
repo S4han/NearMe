@@ -1,7 +1,7 @@
 {
   "name": "NearMe - 내 주변 장소 찾기",
   "short_name": "NearMe",
-  "description": "내 위치 주변의 맛집, 카페, 주차장, 병원, 버스 정류소, 관광지를 찾아보세요.",
+  "description": "내 위치 주변의 맛집, 카페, 편의점, 주차장, 병원, 버스 정류소, 관광지를 찾아보세요.",
   "lang": "ko",
   "start_url": "/",
   "scope": "/",

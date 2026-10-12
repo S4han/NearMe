@@ -2,6 +2,7 @@
 export const categories = [
   { id: 'restaurant', name: '맛집', icon: '🍽️', googleTypes: ['restaurant'] },
   { id: 'cafe', name: '카페', icon: '☕', googleTypes: ['cafe'] },
+  { id: 'convenience_store', name: '편의점', icon: '🏪', googleTypes: ['convenience_store'] },
   { id: 'parking', name: '주차장', icon: '🅿️', googleTypes: ['parking'] },
   { id: 'hospital', name: '병원', icon: '🏥', googleTypes: ['hospital', 'doctor'] },
   { id: 'bus_stop', name: '버스 정류소', icon: '🚌', googleTypes: ['bus_stop', 'bus_station'] },
