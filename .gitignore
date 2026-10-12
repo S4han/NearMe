@@ -23,3 +23,7 @@ Thumbs.db
 
 # Cloudflare Wrangler
 .wrangler/
+
+# Cloudflare Python Workers (pywrangler)
+python_modules/
+.venv-workers/

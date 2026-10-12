@@ -1,0 +1,16 @@
+# Cloudflare Python Workers 배포용 설정 (pywrangler가 읽음)
+# 로컬 uvicorn 개발은 기존처럼 requirements.txt + .venv 사용
+[project]
+name = "nearme-backend"
+version = "1.1.0"
+description = "NearMe Backend (FastAPI)"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+]

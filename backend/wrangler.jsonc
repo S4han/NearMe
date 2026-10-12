@@ -1,0 +1,8 @@
+// Cloudflare Python Workers 배포 설정 (Backend API)
+// 로컬 테스트: uv run pywrangler dev / 배포: uv run pywrangler deploy
+{
+  "name": "nearme-api",
+  "main": "src/worker.py",
+  "compatibility_date": "2025-11-01",
+  "compatibility_flags": ["python_workers"]
+}
