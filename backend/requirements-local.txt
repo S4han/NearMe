@@ -1,0 +1,5 @@
+# 로컬 개발(uvicorn)용 패키지. Cloudflare Workers 배포 패키지는 pyproject.toml에 있음
+fastapi
+uvicorn
+httpx
+truststore

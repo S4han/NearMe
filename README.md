@@ -24,7 +24,7 @@ npm install
 # Backend 가상환경
 cd ..\backend
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-local.txt
 ```
 
 ## 매일 개발 시작

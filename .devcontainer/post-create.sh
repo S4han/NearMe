@@ -8,6 +8,6 @@ echo "== Frontend: npm install =="
 (cd frontend && npm install)
 
 echo "== Backend: venv + pip install =="
-(cd backend && python -m venv .venv && .venv/bin/python -m pip install -r requirements.txt)
+(cd backend && python -m venv .venv && .venv/bin/python -m pip install -r requirements-local.txt)
 
 echo "== 설치 완료. README의 'GitHub Codespaces' 절을 참고해 서버를 실행하세요. =="
