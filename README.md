@@ -75,6 +75,23 @@ npm run dev
 - Frontend의 `/api` 요청은 Codespace 내부에서 8000번으로 프록시되므로 8000 포트를 공개할 필요가 없습니다.
 - 사용하지 않을 때는 Codespace를 **Stop** 하세요. 무료 사용 시간/저장공간을 초과하면 과금될 수 있습니다.
 
+## Backend API
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/health` | 상태 확인 |
+| GET | `/api/bus/stations/nearby?lat=&lng=&radius=1000&limit=20` | 제주 주변 버스 정류장(가까운 순) |
+| GET | `/api/bus/stations/{stationId}/arrivals` | 실시간 도착 예정(20초 캐시) |
+| GET | `/api/bus/stations/{stationId}/routes` | 정류장 경유 노선(1시간 캐시) |
+
+데이터 출처와 응답 필드는 [`docs/jeju-bus-api.md`](docs/jeju-bus-api.md) 참고.
+
+Backend 테스트(PowerShell, `backend` 폴더):
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover tests
+```
+
 ## 배포용 빌드
 
 ```powershell
