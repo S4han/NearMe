@@ -6,6 +6,7 @@ import {
   type SearchRadius,
 } from './config/categories'
 import { DEFAULT_CENTER } from './config/maps'
+import { API_BASE_URL, BACKEND_ENABLED } from './config/api'
 import MapView from './components/MapView'
 import TopBar, { type BackendStatus } from './components/TopBar'
 import BottomSheet from './components/BottomSheet'
@@ -43,7 +44,8 @@ function App() {
   const selected = categories.find((c) => c.id === category)!
 
   useEffect(() => {
-    fetch('/api/health')
+    if (!BACKEND_ENABLED) return
+    fetch(`${API_BASE_URL}/api/health`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then((data: { status?: string }) => setBackendStatus(data.status === 'ok' ? 'ok' : 'error'))
       .catch(() => setBackendStatus('error'))
@@ -141,7 +143,11 @@ function App() {
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between md:inset-y-4 md:right-auto md:left-4 md:w-[420px] md:justify-start md:gap-3">
         <div className="flex flex-col items-center gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:items-stretch md:p-0">
           <div className="w-full">
-            <TopBar category={category} onCategoryChange={handleCategoryChange} backendStatus={backendStatus} />
+            <TopBar
+              category={category}
+              onCategoryChange={handleCategoryChange}
+              backendStatus={BACKEND_ENABLED ? backendStatus : undefined}
+            />
           </div>
 
           {geoMessage && (

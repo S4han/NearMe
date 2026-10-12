@@ -5,7 +5,7 @@ export type BackendStatus = 'checking' | 'ok' | 'error'
 type TopBarProps = {
   category: PlaceCategory
   onCategoryChange: (c: PlaceCategory) => void
-  backendStatus: BackendStatus
+  backendStatus?: BackendStatus // 없으면 Backend 상태 표시 숨김(Backend 미배포 환경)
 }
 
 const backendDot: Record<BackendStatus, string> = {
@@ -21,13 +21,15 @@ function TopBar({ category, onCategoryChange, backendStatus }: TopBarProps) {
         <h1 className="text-lg font-extrabold tracking-tight">
           <span className="text-blue-600">Near</span>Me
         </h1>
-        <span
-          className="flex items-center gap-1.5 text-[11px] text-gray-500"
-          title={`NearMe Backend: ${backendStatus}`}
-        >
-          <span className={`h-2 w-2 rounded-full ${backendDot[backendStatus]}`} />
-          Backend {backendStatus}
-        </span>
+        {backendStatus && (
+          <span
+            className="flex items-center gap-1.5 text-[11px] text-gray-500"
+            title={`NearMe Backend: ${backendStatus}`}
+          >
+            <span className={`h-2 w-2 rounded-full ${backendDot[backendStatus]}`} />
+            Backend {backendStatus}
+          </span>
+        )}
       </div>
 
       <div className="-mx-3 mt-2 flex gap-2 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
