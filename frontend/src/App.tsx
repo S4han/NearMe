@@ -1,27 +1,25 @@
 import { useEffect, useState } from 'react'
 import {
   categories,
-  radiusOptions,
   DEFAULT_RADIUS,
   type PlaceCategory,
   type SearchRadius,
 } from './config/categories'
-import MapView from './components/MapView'
 import { DEFAULT_CENTER } from './config/maps'
+import MapView from './components/MapView'
+import TopBar, { type BackendStatus } from './components/TopBar'
+import BottomSheet from './components/BottomSheet'
+import PlaceList, { type SearchStatus } from './components/PlaceList'
+import { LocateIcon, SearchIcon, Spinner } from './components/icons'
 import { useGeolocation, type GeoStatus } from './hooks/useGeolocation'
+import { searchNearbyPlaces } from './services/places'
 import type { LatLng } from './types/location'
 import type { NearbyPlace } from './types/place'
-import PlaceList, { type SearchStatus } from './components/PlaceList'
-import { searchNearbyPlaces } from './services/places'
 
-type BackendStatus = 'checking' | 'ok' | 'error'
-
-const geoMessages: Record<GeoStatus, string> = {
-  idle: '',
+const geoMessages: Partial<Record<GeoStatus, string>> = {
   locating: '현재 위치를 확인하는 중…',
-  granted: '현재 위치를 중심으로 표시합니다.',
-  denied: '위치 권한이 거부되어 제주시청을 중심으로 표시합니다. 지도를 움직여 검색하세요.',
-  unavailable: '현재 위치를 가져올 수 없어 제주시청을 중심으로 표시합니다. 지도를 움직여 검색하세요.',
+  denied: '위치 권한이 꺼져 있어 제주시청 기준으로 보여드려요',
+  unavailable: '현재 위치를 찾지 못해 제주시청 기준으로 보여드려요',
 }
 
 function App() {
@@ -40,15 +38,14 @@ function App() {
   const [searchLabel, setSearchLabel] = useState('')
   const [searchError, setSearchError] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   const selected = categories.find((c) => c.id === category)!
 
   useEffect(() => {
     fetch('/api/health')
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((data: { status?: string }) =>
-        setBackendStatus(data.status === 'ok' ? 'ok' : 'error'),
-      )
+      .then((data: { status?: string }) => setBackendStatus(data.status === 'ok' ? 'ok' : 'error'))
       .catch(() => setBackendStatus('error'))
   }, [])
 
@@ -58,6 +55,7 @@ function App() {
     setSearchCenter(center)
     setSearchStatus('loading')
     setSelectedId(null)
+    setSheetOpen(true)
     try {
       const result = await searchNearbyPlaces({
         center,
@@ -66,7 +64,7 @@ function App() {
         rankBy: selected.rankBy,
       })
       setPlaces(result)
-      setSearchLabel(`${selected.icon} ${selected.name} · 반경 ${radius / 1000}km`)
+      setSearchLabel(`${selected.name} · ${radius / 1000}km`)
       setSearchStatus('done')
     } catch (e) {
       console.error('Nearby search failed', e)
@@ -76,111 +74,90 @@ function App() {
     }
   }
 
+  const handleSelect = (id: string) => {
+    setSelectedId(id)
+    setSheetOpen(true)
+  }
+
+  const subtitle =
+    searchStatus === 'loading'
+      ? '주변을 찾는 중…'
+      : searchStatus === 'done'
+        ? `최근 검색: ${searchLabel} · ${places.length}곳`
+        : searchStatus === 'error'
+          ? '검색에 실패했어요'
+          : '반경을 고르고 이 지역을 검색해 보세요'
+
+  const geoMessage = geoMessages[geoStatus]
+  const isSearching = searchStatus === 'loading'
+
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-gray-50 px-4 py-6">
-      <header className="mb-4">
-        <h1 className="text-2xl font-bold text-blue-600">NearMe</h1>
-        <p className="text-sm text-gray-500">내 주변 장소와 교통정보 찾기</p>
-      </header>
-
-      <section className="mb-4 grid grid-cols-3 gap-2">
-        {categories.map((c) => {
-          const isSelected = c.id === category
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setCategory(c.id)}
-              aria-pressed={isSelected}
-              className={`flex flex-col items-center rounded-xl border px-2 py-3 text-sm transition ${
-                isSelected
-                  ? 'border-blue-600 bg-blue-600 text-white shadow'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'
-              }`}
-            >
-              <span className="text-xl">{c.icon}</span>
-              <span className="mt-1">{c.name}</span>
-            </button>
-          )
-        })}
-      </section>
-
-      <h2 className="mb-3 text-lg font-semibold text-gray-800">
-        {selected.icon} {selected.name} 검색
-      </h2>
-
-      <section className="mb-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs text-gray-500">{geoMessages[geoStatus]}</p>
-          <button
-            type="button"
-            onClick={locate}
-            disabled={geoStatus === 'locating'}
-            className="shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700 hover:border-blue-300 disabled:opacity-50"
-          >
-            📍 내 위치
-          </button>
-        </div>
+    <div className="relative h-dvh w-full overflow-hidden bg-gray-100 font-sans text-gray-900">
+      {/* 지도: 모바일은 전체 화면, 데스크톱은 왼쪽 패널 오른쪽 영역 */}
+      <div className="absolute inset-0 md:left-[452px]">
         <MapView
           userLocation={userLocation}
           searchCenter={searchCenter}
           places={places}
           selectedId={selectedId}
-          onSelectPlace={setSelectedId}
+          onSelectPlace={handleSelect}
           onCenterChange={setMapCenter}
         />
-      </section>
-
-      <section className="mb-4 flex gap-2">
-        {radiusOptions.map((r) => (
-          <button
-            key={r}
-            type="button"
-            onClick={() => setRadius(r)}
-            aria-pressed={r === radius}
-            className={`flex-1 rounded-full border py-2 text-sm transition ${
-              r === radius
-                ? 'border-blue-600 bg-blue-50 font-semibold text-blue-700'
-                : 'border-gray-200 bg-white text-gray-600'
-            }`}
-          >
-            {r / 1000}km
-          </button>
-        ))}
-      </section>
+      </div>
 
       <button
         type="button"
-        onClick={handleSearch}
-        disabled={searchStatus === 'loading'}
-        className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
+        onClick={locate}
+        disabled={geoStatus === 'locating'}
+        aria-label="내 위치로 이동"
+        className="absolute right-6 bottom-6 z-10 hidden h-12 w-12 items-center justify-center rounded-full bg-white text-blue-600 shadow-lg ring-1 ring-black/5 transition active:scale-95 disabled:opacity-60 md:flex"
       >
-        {searchStatus === 'loading' ? '검색 중…' : '이 지역 검색'}
+        <LocateIcon />
       </button>
 
-      <PlaceList
-        status={searchStatus}
-        places={places}
-        label={searchLabel}
-        error={searchError}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-      />
+      {/* 떠 있는 UI: 모바일은 상단 바 + 하단 시트, 데스크톱은 왼쪽 패널 */}
+      <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between md:inset-y-4 md:right-auto md:left-4 md:w-[420px] md:justify-start md:gap-3">
+        <div className="flex flex-col items-center gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:items-stretch md:p-0">
+          <div className="w-full">
+            <TopBar category={category} onCategoryChange={setCategory} backendStatus={backendStatus} />
+          </div>
 
-      <footer className="mt-auto pt-6 text-center text-xs text-gray-500">
-        NearMe Backend:{' '}
-        <span
-          className={
-            backendStatus === 'ok'
-              ? 'font-semibold text-green-600'
-              : backendStatus === 'error'
-                ? 'font-semibold text-red-600'
-                : 'text-gray-400'
-          }
+          {geoMessage && (
+            <p className="pointer-events-auto rounded-full bg-gray-900/80 px-3 py-1.5 text-xs text-white backdrop-blur md:self-center">
+              {geoMessage}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={isSearching}
+            className="pointer-events-auto flex items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-95 disabled:opacity-70 md:py-3"
+          >
+            {isSearching ? <Spinner /> : <SearchIcon />}
+            {isSearching ? '검색 중…' : `이 지역 ${selected.name} 검색`}
+          </button>
+        </div>
+
+        <BottomSheet
+          open={sheetOpen}
+          onToggle={() => setSheetOpen((o) => !o)}
+          title={`${selected.icon} ${selected.name}`}
+          subtitle={subtitle}
+          radius={radius}
+          onRadiusChange={setRadius}
+          onLocate={locate}
+          locating={geoStatus === 'locating'}
         >
-          {backendStatus}
-        </span>
-      </footer>
+          <PlaceList
+            status={searchStatus}
+            places={places}
+            error={searchError}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+          />
+        </BottomSheet>
+      </div>
     </div>
   )
 }
