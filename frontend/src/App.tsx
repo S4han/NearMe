@@ -52,8 +52,9 @@ function App() {
   // 늦게 도착한 이전 검색 응답이 최신 결과를 덮어쓰지 않도록 요청 번호로 구분
   const searchSeq = useRef(0)
 
-  const runSearch = async (searchRadius: SearchRadius) => {
-    // 지도 이동만으로는 검색하지 않고, 버튼/반경을 누른 순간의 지도 중심을 검색 기준으로 확정
+  const runSearch = async (searchCategory: PlaceCategory, searchRadius: SearchRadius) => {
+    const cat = categories.find((c) => c.id === searchCategory)!
+    // 지도 이동만으로는 검색하지 않고, 버튼/카테고리/반경을 누른 순간의 지도 중심을 검색 기준으로 확정
     const seq = ++searchSeq.current
     const center = mapCenter
     setSearchCenter(center)
@@ -64,12 +65,12 @@ function App() {
       const result = await searchNearbyPlaces({
         center,
         radius: searchRadius,
-        types: selected.googleTypes,
-        rankBy: selected.rankBy,
+        types: cat.googleTypes,
+        rankBy: cat.rankBy,
       })
       if (seq !== searchSeq.current) return
       setPlaces(result)
-      setSearchLabel(`${selected.name} · ${searchRadius / 1000}km`)
+      setSearchLabel(`${cat.name} · ${searchRadius / 1000}km`)
       setSearchStatus('done')
     } catch (e) {
       if (seq !== searchSeq.current) return
@@ -80,13 +81,19 @@ function App() {
     }
   }
 
-  const handleSearch = () => runSearch(radius)
+  const handleSearch = () => runSearch(category, radius)
 
-  // 반경을 바꾸면 바로 다시 검색. 이미 선택된 반경을 다시 누르면 호출하지 않음(비용 절약)
+  // 카테고리/반경을 바꾸면 바로 다시 검색. 이미 선택된 것을 다시 누르면 호출하지 않음(비용 절약)
+  const handleCategoryChange = (c: PlaceCategory) => {
+    if (c === category) return
+    setCategory(c)
+    runSearch(c, radius)
+  }
+
   const handleRadiusChange = (r: SearchRadius) => {
     if (r === radius) return
     setRadius(r)
-    runSearch(r)
+    runSearch(category, r)
   }
 
   const handleSelect = (id: string) => {
@@ -134,7 +141,7 @@ function App() {
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between md:inset-y-4 md:right-auto md:left-4 md:w-[420px] md:justify-start md:gap-3">
         <div className="flex flex-col items-center gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:items-stretch md:p-0">
           <div className="w-full">
-            <TopBar category={category} onCategoryChange={setCategory} backendStatus={backendStatus} />
+            <TopBar category={category} onCategoryChange={handleCategoryChange} backendStatus={backendStatus} />
           </div>
 
           {geoMessage && (
