@@ -15,6 +15,8 @@ STATION_XML = """<response><header><resultCode>00</resultCode><resultMsg>NORMAL 
 <item><dirTp>N</dirTp><govNm>405</govNm><localX>126.521348</localX><localY>33.499916</localY><mobiNum>0</mobiNum><stationId>405000151</stationId><stationNm>용천마을</stationNm><upd>2026-07-28 09:28:44</upd><useYn>N</useYn></item>
 <item><dirTp>S</dirTp><govNm>405</govNm><localX>126.514</localX><localY>33.499974</localY><mobiNum>0</mobiNum><stationId>405000153</stationId><stationNm>제주버스터미널</stationNm><upd>2026-07-28 09:28:44</upd><useYn>Y</useYn></item>
 <item><dirTp>N</dirTp><govNm>405</govNm><localX>126.514018</localX><localY>33.500139</localY><mobiNum>0</mobiNum><stationId>405000154</stationId><stationNm>제주버스터미널</stationNm><upd>2026-07-28 09:28:44</upd><useYn>Y</useYn></item>
+<item><dirTp>null</dirTp><govNm>405</govNm><localX>126.515656</localX><localY>33.499888</localY><mobiNum>0</mobiNum><stationId>405001743</stationId><stationNm>제주버스터미널(가상정류소)</stationNm><upd>2026-07-28 09:28:44</upd><useYn>Y</useYn></item>
+<item><dirTp>null</dirTp><govNm>405</govNm><localX>126.516515</localX><localY>33.498389</localY><mobiNum>0</mobiNum><stationId>405002353</stationId><stationNm>차고지(가상)</stationNm><upd>2026-07-28 09:28:44</upd><useYn>Y</useYn></item>
 <item><dirTp>null</dirTp><govNm>405</govNm><localX>126.5197</localX><localY>33.501633</localY><mobiNum>0</mobiNum><stationId>405000157</stationId><stationNm>중앙마을</stationNm><upd>2026-07-28 09:28:44</upd><useYn>Y</useYn></item>
 </items></body></response>"""
 
@@ -28,7 +30,7 @@ ROUTES_JSON = """[{"STATION_NM":"제주버스터미널","ROUTE_SUB_NM":"성산�
 
 
 class ParseStationsTest(unittest.TestCase):
-    def test_only_in_use_stations(self):
+    def test_only_in_use_and_real_stations(self):
         stations = jeju_bus.parse_stations(STATION_XML)
         self.assertEqual([s["id"] for s in stations], ["405000153", "405000154", "405000157"])
 

@@ -16,7 +16,10 @@ def _text(item: ET.Element, tag: str) -> str:
 
 
 def parse_stations(xml_text: str) -> list[dict[str, Any]]:
-    """JTBIS Station XML → 사용 중(useYn=Y)인 정류장 목록."""
+    """JTBIS Station XML → 사용 중(useYn=Y)이고 실제 승하차가 가능한 정류장 목록.
+
+    '제주버스터미널(가상정류소)', '차고지(가상)'처럼 이름에 '가상'이 들어간 시스템용 정류장은 제외한다.
+    """
     root = ET.fromstring(xml_text)
     result_code = root.findtext("./header/resultCode")
     if result_code not in (None, "00"):
@@ -32,13 +35,16 @@ def parse_stations(xml_text: str) -> list[dict[str, Any]]:
         except ValueError:
             continue
         station_id = _text(item, "stationId")
+        name = _text(item, "stationNm")
+        if "가상" in name:
+            continue
         if not station_id or not (-90 <= lat <= 90 and -180 <= lng <= 180):
             continue
         direction = _text(item, "dirTp").upper()
         stations.append(
             {
                 "id": station_id,
-                "name": _text(item, "stationNm"),
+                "name": name,
                 "lat": lat,
                 "lng": lng,
                 "direction": direction if direction in DIRECTIONS else None,
