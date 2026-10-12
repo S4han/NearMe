@@ -1,5 +1,6 @@
-// Cloudflare Python Workers 배포 설정 (Backend API)
-// 로컬 테스트: uv run pywrangler dev / 배포: uv run pywrangler deploy
+// Cloudflare Python Workers config for the NearMe backend API.
+// Local test: uv run pywrangler dev / Deploy: uv run pywrangler deploy
+// Keep this file ASCII-only: pywrangler reads it with the OS default encoding (cp949 on Korean Windows).
 {
   "name": "nearme-api",
   "main": "src/worker.py",
