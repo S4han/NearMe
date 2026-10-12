@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   categories,
   DEFAULT_RADIUS,
@@ -49,8 +49,12 @@ function App() {
       .catch(() => setBackendStatus('error'))
   }, [])
 
-  const handleSearch = async () => {
-    // 지도 이동만으로는 검색하지 않고, 버튼을 누른 순간의 지도 중심을 검색 기준으로 확정
+  // 늦게 도착한 이전 검색 응답이 최신 결과를 덮어쓰지 않도록 요청 번호로 구분
+  const searchSeq = useRef(0)
+
+  const runSearch = async (searchRadius: SearchRadius) => {
+    // 지도 이동만으로는 검색하지 않고, 버튼/반경을 누른 순간의 지도 중심을 검색 기준으로 확정
+    const seq = ++searchSeq.current
     const center = mapCenter
     setSearchCenter(center)
     setSearchStatus('loading')
@@ -59,19 +63,30 @@ function App() {
     try {
       const result = await searchNearbyPlaces({
         center,
-        radius,
+        radius: searchRadius,
         types: selected.googleTypes,
         rankBy: selected.rankBy,
       })
+      if (seq !== searchSeq.current) return
       setPlaces(result)
-      setSearchLabel(`${selected.name} · ${radius / 1000}km`)
+      setSearchLabel(`${selected.name} · ${searchRadius / 1000}km`)
       setSearchStatus('done')
     } catch (e) {
+      if (seq !== searchSeq.current) return
       console.error('Nearby search failed', e)
       setPlaces([])
       setSearchError(e instanceof Error ? e.message : String(e))
       setSearchStatus('error')
     }
+  }
+
+  const handleSearch = () => runSearch(radius)
+
+  // 반경을 바꾸면 바로 다시 검색. 이미 선택된 반경을 다시 누르면 호출하지 않음(비용 절약)
+  const handleRadiusChange = (r: SearchRadius) => {
+    if (r === radius) return
+    setRadius(r)
+    runSearch(r)
   }
 
   const handleSelect = (id: string) => {
@@ -145,7 +160,7 @@ function App() {
           title={`${selected.icon} ${selected.name}`}
           subtitle={subtitle}
           radius={radius}
-          onRadiusChange={setRadius}
+          onRadiusChange={handleRadiusChange}
           onLocate={locate}
           locating={geoStatus === 'locating'}
         >
