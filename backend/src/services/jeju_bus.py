@@ -5,6 +5,7 @@
 
 import json
 import math
+import re
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -15,18 +16,21 @@ def _text(item: ET.Element, tag: str) -> str:
     return (item.findtext(tag) or "").strip()
 
 
+def _items(xml_text: str) -> list[ET.Element]:
+    root = ET.fromstring(xml_text)
+    result_code = root.findtext("./header/resultCode")
+    if result_code not in (None, "00"):
+        raise ValueError(f"JTBIS resultCode={result_code}")
+    return list(root.iter("item"))
+
+
 def parse_stations(xml_text: str) -> list[dict[str, Any]]:
     """JTBIS Station XML → 사용 중(useYn=Y)이고 실제 승하차가 가능한 정류장 목록.
 
     '제주버스터미널(가상정류소)', '차고지(가상)'처럼 이름에 '가상'이 들어간 시스템용 정류장은 제외한다.
     """
-    root = ET.fromstring(xml_text)
-    result_code = root.findtext("./header/resultCode")
-    if result_code not in (None, "00"):
-        raise ValueError(f"JTBIS resultCode={result_code}")
-
     stations = []
-    for item in root.iter("item"):
+    for item in _items(xml_text):
         if _text(item, "useYn") != "Y":
             continue
         try:
@@ -113,6 +117,12 @@ def parse_arrivals(json_text: str) -> list[dict[str, Any]]:
     return arrivals
 
 
+def _route_sort_key(r: dict[str, Any]) -> tuple:
+    """노선번호의 앞자리 숫자 기준 정렬(43-1 < 101 < 461), 숫자가 없으면 뒤로."""
+    m = re.match(r"\d+", r["routeNum"])
+    return (0, int(m.group()), r["routeNum"], r["routeName"]) if m else (1, 0, r["routeNum"], r["routeName"])
+
+
 def parse_routes(json_text: str) -> list[dict[str, Any]]:
     """bus.jeju.go.kr searchRouteByStationList → 정류장 경유 노선(노선번호 순, 중복 제거)."""
     routes: dict[str, dict[str, Any]] = {}
@@ -128,8 +138,74 @@ def parse_routes(json_text: str) -> list[dict[str, Any]]:
             "destination": str(d.get("DST_NM", "")),
         }
 
-    def sort_key(r: dict[str, Any]) -> tuple:
-        num = r["routeNum"]
-        return (0, int(num), r["routeName"]) if num.isdigit() else (1, 0, num + r["routeName"])
+    return sorted(routes.values(), key=_route_sort_key)
 
-    return sorted(routes.values(), key=sort_key)
+
+# ---- JTBIS 대체 경로 (bus.jeju.go.kr 장애 또는 Workers 인증서 문제 시) ----
+
+
+def parse_bus_routes(xml_text: str) -> dict[str, dict[str, Any]]:
+    """JTBIS Bus XML → {routeId: 노선 정보}. 폐지 노선도 ID 변환용으로 포함하고 inUse로 구분."""
+    routes = {}
+    for item in _items(xml_text):
+        route_id = _text(item, "routeId")
+        if not route_id:
+            continue
+        routes[route_id] = {
+            "routeId": route_id,
+            "routeNum": _text(item, "routeNum"),
+            "routeName": _text(item, "routeNm"),
+            "destination": _text(item, "routeSubNm"),
+            "inUse": _text(item, "useYn") == "Y",
+        }
+    return routes
+
+
+def parse_jtbis_arrivals(xml_text: str, routes: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """JTBIS BusArrives XML → 도착 예정 목록(빠른 순).
+
+    운행 중이 아닌 노선도 arrvVhId=0, predictTravTm=0으로 내려오므로 실제 차량(arrvVhId≠0)만 남긴다.
+    버스의 현재 정류장명·차량번호·저상 여부는 제공되지 않는다.
+    """
+    seen: set[tuple[str, str]] = set()
+    arrivals = []
+    for item in _items(xml_text):
+        vehicle_id = _text(item, "arrvVhId")
+        route_id = _text(item, "routeId")
+        minutes = _int(_text(item, "predictTravTm"))
+        if vehicle_id in ("", "0") or minutes is None or (route_id, vehicle_id) in seen:
+            continue
+        seen.add((route_id, vehicle_id))
+        route = routes.get(route_id, {})
+        arrivals.append(
+            {
+                "routeId": route_id,
+                "routeNum": route.get("routeNum") or route_id,
+                "destination": route.get("destination", ""),
+                "minutes": minutes,
+                "remainStations": _int(_text(item, "leftStation")),
+                "currentStationName": None,
+                "plateNo": None,
+                "lowFloor": None,
+            }
+        )
+    arrivals.sort(key=lambda a: a["minutes"])
+    return arrivals
+
+
+def parse_jtbis_station_routes(xml_text: str, routes: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """JTBIS StationRoutePs XML → 정류장 경유 노선(사용 중인 노선만, 노선번호 순)."""
+    found: dict[str, dict[str, Any]] = {}
+    for item in _items(xml_text):
+        route_id = _text(item, "routeId")
+        route = routes.get(route_id)
+        if _text(item, "useYn") != "Y" or not route or not route["inUse"] or route_id in found:
+            continue
+        found[route_id] = {
+            "routeId": route_id,
+            "routeNum": route["routeNum"],
+            "routeName": route["routeName"],
+            "origin": None,
+            "destination": route["destination"],
+        }
+    return sorted(found.values(), key=_route_sort_key)

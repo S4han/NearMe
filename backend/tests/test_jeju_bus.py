@@ -29,6 +29,31 @@ ROUTES_JSON = """[{"STATION_NM":"제주버스터미널","ROUTE_SUB_NM":"성산�
 {"STATION_NM":"제주버스터미널","ROUTE_SUB_NM":"남원환승정류장(남원읍사무소)","ORGT_NM":"제주국제공항2(일주동로, 516도로)","ROUTE_ID":405410111,"ROUTE_NUM":"101","DST_STATION_ID":406001604,"DST_NM":"남원환승정류장(남원읍사무소)","ROUTE_NM":"101-11","STATION_ID":405000153,"ORGT_STATION_ID":405002101}]"""
 
 
+# JTBIS Bus(노선 목록): 실제 응답 형식 + 테스트용 노선(405104309, 405246101) 추가
+BUS_XML = """<response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header><body><items>
+<item><dstStationId>406001556</dstStationId><govNm>null</govNm><orgtStationId>406000976</orgtStationId><routeColor>1</routeColor><routeId>405000001</routeId><routeLen>9951</routeLen><routeNm>5000-1</routeNm><routeNum>5000</routeNum><routeSubNm>대정오일시장</routeSubNm><routeTp>43</routeTp><stationCnt>13</stationCnt><upd>2017-08-29 21:18:42</upd><useYn>N</useYn></item>
+<item><routeId>405104309</routeId><routeNm>43-1</routeNm><routeNum>43-1</routeNum><routeSubNm>제주버스터미널(종점)</routeSubNm><useYn>Y</useYn></item>
+<item><routeId>405246101</routeId><routeNm>461-1</routeNm><routeNum>461</routeNum><routeSubNm>제주버스터미널(종점)</routeSubNm><useYn>Y</useYn></item>
+</items></body></response>"""
+
+# JTBIS BusArrives: 실제 응답(운행 안 하는 노선 arrvVhId=0 포함) + 같은 차량 중복 항목
+BUS_ARRIVES_XML = """<response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header><body><items>
+<item><arrvVhId>0</arrvVhId><calcDate>2025-05-08T17:44:48+09:00</calcDate><leftStation>0</leftStation><predictTravTm>0</predictTravTm><routeId>405104301</routeId><stationOrd>49</stationOrd><updnDir>0</updnDir></item>
+<item><arrvVhId>7983545</arrvVhId><calcDate>2025-05-08T17:44:48+09:00</calcDate><leftStation>17</leftStation><predictTravTm>42</predictTravTm><routeId>405104309</routeId><stationOrd>47</stationOrd><updnDir>0</updnDir></item>
+<item><arrvVhId>7983545</arrvVhId><calcDate>2025-05-08T17:44:48+09:00</calcDate><leftStation>17</leftStation><predictTravTm>42</predictTravTm><routeId>405104309</routeId><stationOrd>48</stationOrd><updnDir>0</updnDir></item>
+<item><arrvVhId>7983663</arrvVhId><calcDate>2025-05-08T17:44:48+09:00</calcDate><leftStation>12</leftStation><predictTravTm>19</predictTravTm><routeId>405246101</routeId><stationOrd>30</stationOrd><updnDir>0</updnDir></item>
+</items></body></response>"""
+
+# JTBIS StationRoutePs: 실제 응답(2017년 폐지 경유 useYn=N) + 사용 중 경유
+STATION_ROUTE_PS_XML = """<response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header><body><items>
+<item><routeDist>17913</routeDist><routeId>405005002</routeId><stationId>405000153</stationId><stationOrd>44</stationOrd><upd>2017-08-25 01:23:39</upd><updnDir>0</updnDir><useYn>N</useYn><waypointOrd>107</waypointOrd></item>
+<item><routeDist>3000</routeDist><routeId>405246101</routeId><stationId>405000153</stationId><stationOrd>30</stationOrd><updnDir>0</updnDir><useYn>Y</useYn></item>
+<item><routeDist>4000</routeDist><routeId>405104309</routeId><stationId>405000153</stationId><stationOrd>47</stationOrd><updnDir>0</updnDir><useYn>Y</useYn></item>
+<item><routeDist>4100</routeDist><routeId>405104309</routeId><stationId>405000153</stationId><stationOrd>48</stationOrd><updnDir>0</updnDir><useYn>Y</useYn></item>
+<item><routeDist>0</routeDist><routeId>405000001</routeId><stationId>405000153</stationId><stationOrd>1</stationOrd><updnDir>0</updnDir><useYn>Y</useYn></item>
+</items></body></response>"""
+
+
 class ParseStationsTest(unittest.TestCase):
     def test_only_in_use_and_real_stations(self):
         stations = jeju_bus.parse_stations(STATION_XML)
@@ -98,6 +123,31 @@ class ParseRoutesTest(unittest.TestCase):
         self.assertEqual([r["routeName"] for r in routes], ["101-11", "111-1"])
         self.assertEqual(routes[0]["origin"], "제주국제공항2(일주동로, 516도로)")
         self.assertEqual(routes[0]["destination"], "남원환승정류장(남원읍사무소)")
+
+
+class JtbisFallbackTest(unittest.TestCase):
+    def setUp(self):
+        self.routes = jeju_bus.parse_bus_routes(BUS_XML)
+
+    def test_bus_routes(self):
+        self.assertEqual(len(self.routes), 3)
+        self.assertFalse(self.routes["405000001"]["inUse"])
+        self.assertEqual(self.routes["405246101"]["routeNum"], "461")
+
+    def test_arrivals_only_real_vehicles_dedup_sorted(self):
+        arrivals = jeju_bus.parse_jtbis_arrivals(BUS_ARRIVES_XML, self.routes)
+        self.assertEqual([(a["routeNum"], a["minutes"]) for a in arrivals], [("461", 19), ("43-1", 42)])
+        self.assertEqual(arrivals[1]["remainStations"], 17)
+        self.assertEqual(arrivals[1]["destination"], "제주버스터미널(종점)")
+        self.assertIsNone(arrivals[0]["currentStationName"])
+
+    def test_arrivals_unknown_route_falls_back_to_id(self):
+        arrivals = jeju_bus.parse_jtbis_arrivals(BUS_ARRIVES_XML, {})
+        self.assertEqual(arrivals[0]["routeNum"], "405246101")
+
+    def test_station_routes_in_use_only(self):
+        routes = jeju_bus.parse_jtbis_station_routes(STATION_ROUTE_PS_XML, self.routes)
+        self.assertEqual([r["routeNum"] for r in routes], ["43-1", "461"])
 
 
 if __name__ == "__main__":

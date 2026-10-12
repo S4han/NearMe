@@ -92,7 +92,7 @@
 - [ ] 막차 이후·운행 없는 정류장의 도착 API 응답 형태(빈 배열 여부)
 - [ ] 호출 빈도 제한 여부(JTBIS 문서상 30 tps)
 - [ ] Cloudflare에서 `http://busopen.jeju.go.kr` 호출 가능 여부
-- [ ] Cloudflare Workers `fetch`가 `bus.jeju.go.kr`의 불완전한 인증서 체인을 통과하는지
+- [x] Cloudflare Workers `fetch`가 `bus.jeju.go.kr`의 불완전한 인증서 체인을 통과하는지 → **실패** (`pywrangler dev`, `internal error`). JTBIS 자동 전환으로 대응
 
 ## 인증서 문제 (2026-10-12 확인)
 
@@ -101,3 +101,16 @@
 - Python `httpx` 기본(certifi): `CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate` → 실패
 - 대응: `truststore`로 OS 인증서 저장소를 사용(Windows/macOS는 보완 동작). 검증을 끄지(`verify=False`) 않는다.
 - Linux(Codespaces)와 Cloudflare Workers는 자동 보완이 안 될 수 있음 → 배포 단계에서 검증 필요.
+
+## 자동 전환(Fallback) 구조 (2026-10-12)
+
+도착 정보·경유 노선은 `bus.jeju.go.kr` → 실패 시 JTBIS 순으로 조회하고, 응답에 `source`(`bus.jeju.go.kr` 또는 `jtbis`)를 표시한다.
+`bus.jeju.go.kr` 실패 후 10분간은 바로 JTBIS를 사용한다.
+
+| 기능 | 1순위 bus.jeju.go.kr | 대체 JTBIS |
+|---|---|---|
+| 도착 예정 | `searchArrivalInfoList` | `BusArrives`(arrvVhId≠0만, 차량 중복 제거) + `Bus` 노선 목록으로 노선번호·행선지 변환 |
+| 경유 노선 | `searchRouteByStationList` | `StationRoutePs`(useYn=Y) + `Bus`(useYn=Y) |
+| JTBIS에서 빠지는 정보 | — | 버스 현재 정류장명, 차량번호, 저상 여부(`null`), 노선 출발지(`null`) |
+
+JTBIS `Bus` 실측: 응답 형식은 문서와 동일(`routeId`, `routeNm`, `routeNum`, `routeSubNm`, `useYn` 등), 폐지 노선(`useYn=N`)도 포함.
