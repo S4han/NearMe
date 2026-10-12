@@ -92,3 +92,12 @@
 - [ ] 막차 이후·운행 없는 정류장의 도착 API 응답 형태(빈 배열 여부)
 - [ ] 호출 빈도 제한 여부(JTBIS 문서상 30 tps)
 - [ ] Cloudflare에서 `http://busopen.jeju.go.kr` 호출 가능 여부
+- [ ] Cloudflare Workers `fetch`가 `bus.jeju.go.kr`의 불완전한 인증서 체인을 통과하는지
+
+## 인증서 문제 (2026-10-12 확인)
+
+`bus.jeju.go.kr`은 TLS 핸드셰이크에서 **중간 인증서를 보내지 않는다.**
+- Windows `curl.exe`(Schannel): 중간 인증서를 자동 보완 → 성공
+- Python `httpx` 기본(certifi): `CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate` → 실패
+- 대응: `truststore`로 OS 인증서 저장소를 사용(Windows/macOS는 보완 동작). 검증을 끄지(`verify=False`) 않는다.
+- Linux(Codespaces)와 Cloudflare Workers는 자동 보완이 안 될 수 있음 → 배포 단계에서 검증 필요.
