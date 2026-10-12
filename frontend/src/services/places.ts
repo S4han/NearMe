@@ -1,6 +1,6 @@
 import { MAX_RESULTS } from '../config/maps'
 import type { LatLng } from '../types/location'
-import type { NearbyPlace, PlaceDetails } from '../types/place'
+import type { NearbyPlace } from '../types/place'
 
 type SearchParams = {
   center: LatLng
@@ -10,7 +10,7 @@ type SearchParams = {
 }
 
 // 비용 통제: 목록 표시에 필요한 최소 필드만 요청한다(Nearby Search Pro 등급).
-// 평점·영업시간·전화번호 등은 장소 상세 단계에서 필요할 때만 요청한다.
+// 평점·영업시간·전화번호 등 상세정보는 API로 조회하지 않고 Google 지도 장소 링크로 대신한다(무료).
 const FIELDS = ['id', 'displayName', 'location', 'formattedAddress', 'primaryTypeDisplayName']
 
 async function loadPlacesLibrary(): Promise<google.maps.PlacesLibrary> {
@@ -55,30 +55,6 @@ export async function searchNearbyPlaces({
   })
 }
 
-// 상세 필드는 Place Details Enterprise 등급이므로 사용자가 '상세정보'를 눌렀을 때만 1회 조회
-const DETAIL_FIELDS = [
-  'rating',
-  'userRatingCount',
-  'regularOpeningHours',
-  'nationalPhoneNumber',
-  'websiteURI',
-  'googleMapsURI',
-]
-
-export async function fetchPlaceDetails(id: string): Promise<PlaceDetails> {
-  const { Place } = await loadPlacesLibrary()
-  const place = new Place({ id })
-  await place.fetchFields({ fields: DETAIL_FIELDS })
-  return {
-    rating: place.rating ?? null,
-    ratingCount: place.userRatingCount ?? null,
-    openingHours: place.regularOpeningHours?.weekdayDescriptions ?? [],
-    phone: place.nationalPhoneNumber ?? '',
-    website: place.websiteURI ?? '',
-    googleMapsUrl: place.googleMapsURI ?? '',
-  }
-}
-
 // 두 좌표 사이 직선거리(m), 하버사인 공식
 export function distanceMeters(a: LatLng, b: LatLng): number {
   const R = 6371000
@@ -104,4 +80,14 @@ export function directionsUrl(place: NearbyPlace): string {
     travelmode: 'transit',
   })
   return `https://www.google.com/maps/dir/?${params}`
+}
+
+// Google 지도 장소 페이지 링크(API 호출 없음, 무료). 평점·영업시간·전화번호·리뷰는 Google 지도에서 확인
+export function placeDetailsUrl(place: NearbyPlace): string {
+  const params = new URLSearchParams({
+    api: '1',
+    query: place.name,
+    query_place_id: place.id,
+  })
+  return `https://www.google.com/maps/search/?${params}`
 }

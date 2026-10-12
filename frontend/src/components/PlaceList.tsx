@@ -1,5 +1,4 @@
-import { directionsUrl, formatDistance } from '../services/places'
-import PlaceDetailsPanel from './PlaceDetailsPanel'
+import { directionsUrl, formatDistance, placeDetailsUrl } from '../services/places'
 import type { NearbyPlace } from '../types/place'
 
 export type SearchStatus = 'idle' | 'loading' | 'done' | 'error'
@@ -63,15 +62,14 @@ function PlaceList({ status, places, label, error, selectedId, onSelect }: Place
                 {p.typeLabel && <p className="text-xs text-gray-500">{p.typeLabel}</p>}
                 {p.address && <p className="mt-1 text-xs text-gray-600">{p.address}</p>}
               </button>
-              <a
-                href={directionsUrl(p)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block text-xs font-semibold text-blue-600"
-              >
-                Google 지도 길찾기 ↗
-              </a>
-              {isSelected && <PlaceDetailsPanel placeId={p.id} />}
+              <div className="mt-2 flex gap-4 text-xs font-semibold text-blue-600">
+                <a href={placeDetailsUrl(p)} target="_blank" rel="noopener noreferrer">
+                  상세정보 ↗
+                </a>
+                <a href={directionsUrl(p)} target="_blank" rel="noopener noreferrer">
+                  길찾기 ↗
+                </a>
+              </div>
             </li>
           )
         })}

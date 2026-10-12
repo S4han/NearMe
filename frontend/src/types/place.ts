@@ -10,12 +10,3 @@ export type NearbyPlace = {
   distance: number // 검색 기준점에서의 직선거리(m)
 }
 
-// 장소 상세(사용자가 요청할 때만 조회)
-export type PlaceDetails = {
-  rating: number | null
-  ratingCount: number | null
-  openingHours: string[]
-  phone: string
-  website: string
-  googleMapsUrl: string
-}
