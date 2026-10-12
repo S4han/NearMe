@@ -1,7 +1,7 @@
 """제주 버스 API: 주변 정류장, 실시간 도착 예정, 경유 노선.
 
 도착·경유 노선은 bus.jeju.go.kr(JSON, 정보가 더 풍부)을 먼저 시도하고, 실패하면 JTBIS(XML)로 전환한다.
-bus.jeju.go.kr은 인증서 문제로 Cloudflare Workers에서 연결이 실패하므로, 실패 후 일정 시간은 바로 JTBIS를 쓴다.
+bus.jeju.go.kr은 중간 인증서 누락으로 환경에 따라 연결이 실패하므로, 실패 후 일정 시간은 바로 JTBIS를 쓴다.
 """
 
 from collections.abc import Awaitable, Callable

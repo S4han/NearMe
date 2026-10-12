@@ -114,3 +114,9 @@
 | JTBIS에서 빠지는 정보 | — | 버스 현재 정류장명, 차량번호, 저상 여부(`null`), 노선 출발지(`null`) |
 
 JTBIS `Bus` 실측: 응답 형식은 문서와 동일(`routeId`, `routeNm`, `routeNum`, `routeSubNm`, `useYn` 등), 폐지 노선(`useYn=N`)도 포함.
+
+## Backend 호스팅 결정 (2026-10-12)
+
+- Cloudflare Python Workers(무료): FastAPI가 import 시 난수를 생성해 시작 단계 import 불가 → 요청 시 import하면 CPU 10ms 한도 초과(`Error 1102`). 무료 플랜으로는 운영 불가.
+- 결정: **Google Cloud Run(서울 `asia-northeast3`)** 에 기존 FastAPI 코드를 컨테이너로 배포. 한국 리전이라 제주 공공 API 접속에도 유리.
+- Linux 컨테이너에서는 `bus.jeju.go.kr` 중간 인증서 보완이 안 될 수 있으며, 이 경우 JTBIS로 자동 전환된다(응답 `source` 필드로 확인).

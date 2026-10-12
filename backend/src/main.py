@@ -1,7 +1,7 @@
 import os
 import sys
 
-# src 폴더를 import 기준으로 사용(로컬 `uvicorn src.main:app` / Cloudflare Workers 공용)
+# src 폴더를 import 기준으로 사용(`uvicorn src.main:app`으로 실행)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI  # noqa: E402
@@ -20,8 +20,6 @@ app.add_middleware(
 )
 
 
-# Cloudflare Python Workers(Pyodide)는 스레드를 지원하지 않는다.
-# FastAPI는 일반 def 경로를 스레드풀에서 실행하므로 모든 경로는 async def로 작성한다.
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "service": "NearMe Backend"}

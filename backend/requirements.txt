@@ -1,0 +1,5 @@
+# Backend 패키지 (로컬 개발 + Cloud Run 컨테이너 공용)
+fastapi
+uvicorn
+httpx
+truststore

@@ -10,7 +10,7 @@ JTBIS_STATION_URL = f"{JTBIS_API_BASE}/Station"  # 전체 정류장 1회 응답(
 JTBIS_BUS_URL = f"{JTBIS_API_BASE}/Bus"  # 전체 노선 목록(routeId → 노선번호/행선지)
 
 # 제주 버스정보 JSON API: 키 불필요, https (http 요청 시 302로 https 이동)
-# 이 서버는 중간 인증서를 보내지 않아 Cloudflare Workers fetch가 실패한다(2026-10-12 확인).
+# 이 서버는 중간 인증서를 보내지 않아 환경에 따라 TLS 검증이 실패한다(2026-10-12 확인).
 # 실패하면 JTBIS로 자동 전환한다.
 JEJU_BUS_API_BASE = "https://bus.jeju.go.kr/api"
 PRIMARY_RETRY_AFTER = 10 * 60  # bus.jeju.go.kr 실패 후 다시 시도하기까지(초)

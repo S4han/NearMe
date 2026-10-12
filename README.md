@@ -6,7 +6,7 @@ GPS 위치 또는 지도 중심을 기준으로 주변 장소(맛집·카페·�
 |---|---|
 | Frontend | React + TypeScript + Vite + Tailwind CSS (`frontend/`) |
 | Backend | Python + FastAPI, 로컬은 Uvicorn (`backend/`) |
-| 배포(예정) | Cloudflare Pages / Cloudflare Python Workers |
+| 배포 | Frontend: Cloudflare Workers(정적 자산) / Backend: Google Cloud Run(서울 `asia-northeast3`) |
 
 ## 최초 설정 (Windows PowerShell, 1회)
 
@@ -24,7 +24,7 @@ npm install
 # Backend 가상환경
 cd ..\backend
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-local.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 ## 매일 개발 시작
@@ -91,6 +91,29 @@ Backend 테스트(PowerShell, `backend` 폴더):
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover tests
 ```
+
+## Backend 배포 (Google Cloud Run, 서울)
+
+Cloudflare Python Workers 무료 플랜은 요청당 CPU 약 10ms 제한으로 FastAPI 실행이 불가(`Error 1102`, 2026-10-12 확인)하여 Cloud Run으로 배포한다.
+
+Google Cloud 콘솔 오른쪽 위 **Cloud Shell**(브라우저 터미널)에서:
+
+```bash
+git clone -b claude/new-session-f23yq3 https://github.com/S4han/NearMe.git   # 처음 한 번
+cd NearMe && git pull
+
+gcloud run deploy nearme-api \
+  --source backend \
+  --region asia-northeast3 \
+  --allow-unauthenticated \
+  --min-instances 0 \
+  --max-instances 2 \
+  --memory 512Mi
+```
+
+- 배포가 끝나면 표시되는 `Service URL`(예: `https://nearme-api-xxxxx.a.run.app`)을 Cloudflare Frontend 빌드 변수 `VITE_API_BASE_URL`에 등록한다.
+- `--min-instances 0`: 요청이 없으면 0대로 줄어 비용이 들지 않는다(대신 첫 요청이 1~3초 느릴 수 있음).
+- `--max-instances 2`: 비정상 트래픽에도 비용이 커지지 않도록 상한을 둔다.
 
 ## 배포용 빌드
 
