@@ -52,14 +52,17 @@ function App() {
       .catch(() => setBackendStatus('error'))
   }, [])
 
+  // 내 위치로 이동하면 이후 카테고리/반경 검색은 새 위치(이동한 지도 중심) 기준으로 한다
+  useEffect(() => {
+    if (userLocation) setSearchCenter(null)
+  }, [userLocation])
+
   // 늦게 도착한 이전 검색 응답이 최신 결과를 덮어쓰지 않도록 요청 번호로 구분
   const searchSeq = useRef(0)
 
-  const runSearch = async (searchCategory: PlaceCategory, searchRadius: SearchRadius) => {
+  const runSearch = async (searchCategory: PlaceCategory, searchRadius: SearchRadius, center: LatLng) => {
     const cat = categories.find((c) => c.id === searchCategory)!
-    // 지도 이동만으로는 검색하지 않고, 버튼/카테고리/반경을 누른 순간의 지도 중심을 검색 기준으로 확정
     const seq = ++searchSeq.current
-    const center = mapCenter
     setSearchCenter(center)
     setSearchStatus('loading')
     setSelectedId(null)
@@ -87,19 +90,22 @@ function App() {
     }
   }
 
-  const handleSearch = () => runSearch(category, radius)
+  // '이 지역 검색': 지도 이동만으로는 검색하지 않고, 버튼을 누른 순간의 지도 중심을 검색 기준으로 확정
+  const handleSearch = () => runSearch(category, radius, mapCenter)
 
-  // 카테고리/반경을 바꾸면 바로 다시 검색. 이미 선택된 것을 다시 누르면 호출하지 않음(비용 절약)
+  // 카테고리/반경 변경은 같은 장소에서 다시 찾는 것이므로 직전 검색 기준점을 유지한다.
+  // (검색 후 지도가 결과에 맞춰 자동 이동해도 기준점이 따라 움직이지 않도록)
+  // 이미 선택된 것을 다시 누르면 호출하지 않음(비용 절약)
   const handleCategoryChange = (c: PlaceCategory) => {
     if (c === category) return
     setCategory(c)
-    runSearch(c, radius)
+    runSearch(c, radius, searchCenter ?? mapCenter)
   }
 
   const handleRadiusChange = (r: SearchRadius) => {
     if (r === radius) return
     setRadius(r)
-    runSearch(category, r)
+    runSearch(category, r, searchCenter ?? mapCenter)
   }
 
   const handleSelect = (id: string) => {
