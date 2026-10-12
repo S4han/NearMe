@@ -78,7 +78,8 @@ function App() {
             types: cat.googleTypes,
           })
       if (seq !== searchSeq.current) return
-      setPlaces(result)
+      // 모든 검색 결과는 검색 기준점에서 가까운 순으로 표시(목록 번호 = 지도 마커 번호)
+      setPlaces([...result].sort((a, b) => a.distance - b.distance))
       setSearchLabel(`${cat.name} · ${searchRadius / 1000}km`)
       setSearchStatus('done')
     } catch (e) {
