@@ -7,3 +7,6 @@ export const GOOGLE_MAPS_MAP_ID: string = import.meta.env.VITE_GOOGLE_MAPS_MAP_I
 // 위치 권한 거부 시 대체 중심: 제주시청
 export const DEFAULT_CENTER = { lat: 33.4996, lng: 126.5312 }
 export const DEFAULT_ZOOM = 14
+
+// 검색 결과 최대 개수 (Places API Nearby Search 상한 20)
+export const MAX_RESULTS = 20

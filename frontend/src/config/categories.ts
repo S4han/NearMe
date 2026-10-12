@@ -1,10 +1,11 @@
+// googleTypes: Places API (New) 장소 유형, rankBy: 결과 정렬 기준
 export const categories = [
-  { id: 'restaurant', name: '맛집', icon: '🍽️' },
-  { id: 'cafe', name: '카페', icon: '☕' },
-  { id: 'parking', name: '주차장', icon: '🅿️' },
-  { id: 'hospital', name: '병원', icon: '🏥' },
-  { id: 'bus_stop', name: '버스 정류소', icon: '🚌' },
-  { id: 'tourist_attraction', name: '관광지', icon: '🏝️' },
+  { id: 'restaurant', name: '맛집', icon: '🍽️', googleTypes: ['restaurant'], rankBy: 'popularity' },
+  { id: 'cafe', name: '카페', icon: '☕', googleTypes: ['cafe'], rankBy: 'popularity' },
+  { id: 'parking', name: '주차장', icon: '🅿️', googleTypes: ['parking'], rankBy: 'distance' },
+  { id: 'hospital', name: '병원', icon: '🏥', googleTypes: ['hospital', 'doctor'], rankBy: 'distance' },
+  { id: 'bus_stop', name: '버스 정류소', icon: '🚌', googleTypes: ['bus_stop', 'bus_station'], rankBy: 'distance' },
+  { id: 'tourist_attraction', name: '관광지', icon: '🏝️', googleTypes: ['tourist_attraction'], rankBy: 'popularity' },
 ] as const
 
 export type PlaceCategory = (typeof categories)[number]['id']

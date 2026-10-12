@@ -14,10 +14,14 @@ import {
   DEFAULT_ZOOM,
 } from '../config/maps'
 import type { LatLng } from '../types/location'
+import type { NearbyPlace } from '../types/place'
 
 type MapViewProps = {
   userLocation: LatLng | null
   searchCenter: LatLng | null
+  places: NearbyPlace[]
+  selectedId: string | null
+  onSelectPlace: (id: string) => void
   onCenterChange: (center: LatLng) => void
 }
 
@@ -30,7 +34,36 @@ function PanTo({ target }: { target: LatLng | null }) {
   return null
 }
 
-function MapView({ userLocation, searchCenter, onCenterChange }: MapViewProps) {
+// 새 검색 결과가 오면 검색 기준점과 결과가 모두 보이도록 화면 맞춤
+function FitToResults({ center, places }: { center: LatLng | null; places: NearbyPlace[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!map || !center || places.length === 0) return
+    const lats = [center.lat, ...places.map((p) => p.location.lat)]
+    const lngs = [center.lng, ...places.map((p) => p.location.lng)]
+    map.fitBounds(
+      {
+        north: Math.max(...lats),
+        south: Math.min(...lats),
+        east: Math.max(...lngs),
+        west: Math.min(...lngs),
+      },
+      40,
+    )
+  }, [map, center, places])
+  return null
+}
+
+function MapView({
+  userLocation,
+  searchCenter,
+  places,
+  selectedId,
+  onSelectPlace,
+  onCenterChange,
+}: MapViewProps) {
+  const selectedPlace = places.find((p) => p.id === selectedId) ?? null
+
   if (!GOOGLE_MAPS_API_KEY) {
     return (
       <div className="flex h-72 flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-4 text-center text-sm text-gray-500">
@@ -55,6 +88,8 @@ function MapView({ userLocation, searchCenter, onCenterChange }: MapViewProps) {
           style={{ width: '100%', height: '100%' }}
         >
           <PanTo target={userLocation} />
+          <FitToResults center={searchCenter} places={places} />
+          <PanTo target={selectedPlace?.location ?? null} />
 
           {userLocation && (
             <AdvancedMarker position={userLocation} title="내 위치">
@@ -64,9 +99,30 @@ function MapView({ userLocation, searchCenter, onCenterChange }: MapViewProps) {
 
           {searchCenter && (
             <AdvancedMarker position={searchCenter} title="검색 기준 위치">
-              <Pin background="#dc2626" borderColor="#991b1b" glyphColor="#ffffff" />
+              <div className="h-3 w-3 rounded-full border-2 border-white bg-gray-800 shadow" />
             </AdvancedMarker>
           )}
+
+          {places.map((p, i) => {
+            const isSelected = p.id === selectedId
+            return (
+              <AdvancedMarker
+                key={p.id}
+                position={p.location}
+                title={p.name}
+                zIndex={isSelected ? 1000 : i}
+                onClick={() => onSelectPlace(p.id)}
+              >
+                <Pin
+                  background={isSelected ? '#dc2626' : '#2563eb'}
+                  borderColor={isSelected ? '#991b1b' : '#1e40af'}
+                  glyph={String(i + 1)}
+                  glyphColor="#ffffff"
+                  scale={isSelected ? 1.2 : 1}
+                />
+              </AdvancedMarker>
+            )
+          })}
         </Map>
       </APIProvider>
     </div>

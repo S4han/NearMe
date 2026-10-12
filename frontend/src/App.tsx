@@ -10,6 +10,9 @@ import MapView from './components/MapView'
 import { DEFAULT_CENTER } from './config/maps'
 import { useGeolocation, type GeoStatus } from './hooks/useGeolocation'
 import type { LatLng } from './types/location'
+import type { NearbyPlace } from './types/place'
+import PlaceList, { type SearchStatus } from './components/PlaceList'
+import { searchNearbyPlaces } from './services/places'
 
 type BackendStatus = 'checking' | 'ok' | 'error'
 
@@ -31,6 +34,13 @@ function App() {
   const [mapCenter, setMapCenter] = useState<LatLng>(DEFAULT_CENTER)
   const [searchCenter, setSearchCenter] = useState<LatLng | null>(null)
 
+  // 검색 결과
+  const [places, setPlaces] = useState<NearbyPlace[]>([])
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle')
+  const [searchLabel, setSearchLabel] = useState('')
+  const [searchError, setSearchError] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
   const selected = categories.find((c) => c.id === category)!
 
   useEffect(() => {
@@ -42,9 +52,28 @@ function App() {
       .catch(() => setBackendStatus('error'))
   }, [])
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     // 지도 이동만으로는 검색하지 않고, 버튼을 누른 순간의 지도 중심을 검색 기준으로 확정
-    setSearchCenter(mapCenter)
+    const center = mapCenter
+    setSearchCenter(center)
+    setSearchStatus('loading')
+    setSelectedId(null)
+    try {
+      const result = await searchNearbyPlaces({
+        center,
+        radius,
+        types: selected.googleTypes,
+        rankBy: selected.rankBy,
+      })
+      setPlaces(result)
+      setSearchLabel(`${selected.icon} ${selected.name} · 반경 ${radius / 1000}km`)
+      setSearchStatus('done')
+    } catch (e) {
+      console.error('Nearby search failed', e)
+      setPlaces([])
+      setSearchError(e instanceof Error ? e.message : String(e))
+      setSearchStatus('error')
+    }
   }
 
   return (
@@ -95,6 +124,9 @@ function App() {
         <MapView
           userLocation={userLocation}
           searchCenter={searchCenter}
+          places={places}
+          selectedId={selectedId}
+          onSelectPlace={setSelectedId}
           onCenterChange={setMapCenter}
         />
       </section>
@@ -120,19 +152,20 @@ function App() {
       <button
         type="button"
         onClick={handleSearch}
-        className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow hover:bg-blue-700 active:bg-blue-800"
+        disabled={searchStatus === 'loading'}
+        className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
       >
-        이 지역 검색
+        {searchStatus === 'loading' ? '검색 중…' : '이 지역 검색'}
       </button>
 
-      {searchCenter && (
-        <p className="mt-3 rounded-lg bg-white p-3 text-xs text-gray-600 shadow-sm">
-          검색 기준: {searchCenter.lat.toFixed(5)}, {searchCenter.lng.toFixed(5)} · {selected.name} · 반경{' '}
-          {radius / 1000}km
-          <br />
-          <span className="text-gray-400">(실제 장소 검색은 다음 단계에서 연결됩니다)</span>
-        </p>
-      )}
+      <PlaceList
+        status={searchStatus}
+        places={places}
+        label={searchLabel}
+        error={searchError}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+      />
 
       <footer className="mt-auto pt-6 text-center text-xs text-gray-500">
         NearMe Backend:{' '}
