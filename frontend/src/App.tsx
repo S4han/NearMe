@@ -6,6 +6,7 @@ import {
   type PlaceCategory,
   type SearchRadius,
 } from './config/categories'
+import MapView from './components/MapView'
 
 type BackendStatus = 'checking' | 'ok' | 'error'
 
@@ -62,6 +63,10 @@ function App() {
       <h2 className="mb-3 text-lg font-semibold text-gray-800">
         {selected.icon} {selected.name} 검색
       </h2>
+
+      <section className="mb-4">
+        <MapView />
+      </section>
 
       <section className="mb-4 flex gap-2">
         {radiusOptions.map((r) => (
