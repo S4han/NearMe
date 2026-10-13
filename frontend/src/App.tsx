@@ -219,6 +219,8 @@ function App() {
             error={searchError}
             selectedId={selectedId}
             onSelect={handleSelect}
+            userLocation={userLocation}
+            searchCenter={searchCenter}
           />
         </BottomSheet>
       </div>
