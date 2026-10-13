@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { DOMESTIC_AIRPORTS, fetchFlightSchedule, fetchFlightStatus } from '../services/flights'
-import type { FlightDirection, FlightScheduleResponse, FlightStatus, FlightStatusResponse } from '../types/flight'
+import { fetchFlightStatus } from '../services/flights'
+import type { FlightDirection, FlightStatus, FlightStatusResponse } from '../types/flight'
 import { Spinner } from './icons'
 
 const AUTO_REFRESH_MS = 60_000
@@ -19,8 +19,6 @@ function statusColor(status: string | null): string {
   if (/탑승|마감|수속/.test(status)) return 'bg-blue-100 text-blue-700'
   return 'bg-gray-100 text-gray-600'
 }
-
-const fare = (won: number | null) => (won === null ? '-' : `${won.toLocaleString('ko-KR')}원`)
 
 function FlightRow({ f }: { f: FlightStatus }) {
   return (
@@ -48,19 +46,13 @@ function FlightRow({ f }: { f: FlightStatus }) {
   )
 }
 
-// 선택한 공항의 실시간 출발/도착 현황(한국공항공사) + 국내선 노선별 오늘 시간표·운임(TAGO)
+// 선택한 공항의 실시간 출발/도착 현황(한국공항공사)
 function FlightPanel({ airportCode }: { airportCode: string }) {
   const [direction, setDirection] = useState<FlightDirection>('departure')
   const [data, setData] = useState<FlightStatusResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const reqSeq = useRef(0)
-
-  const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [dest, setDest] = useState(airportCode === 'CJU' ? 'GMP' : 'CJU')
-  const [schedule, setSchedule] = useState<FlightScheduleResponse | null>(null)
-  const [scheduleError, setScheduleError] = useState('')
-  const scheduleSeq = useRef(0)
 
   const load = useCallback(async () => {
     const seq = ++reqSeq.current
@@ -88,16 +80,6 @@ function FlightPanel({ airportCode }: { airportCode: string }) {
       reqSeq.current++ // 닫힌 뒤 도착한 응답 무시
     }
   }, [load])
-
-  useEffect(() => {
-    if (!scheduleOpen) return
-    const seq = ++scheduleSeq.current
-    setSchedule(null)
-    setScheduleError('')
-    fetchFlightSchedule(airportCode, dest)
-      .then((result) => seq === scheduleSeq.current && setSchedule(result))
-      .catch((e) => seq === scheduleSeq.current && setScheduleError(e instanceof Error ? e.message : String(e)))
-  }, [scheduleOpen, airportCode, dest])
 
   const tabClass = (d: FlightDirection) =>
     `flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
@@ -155,66 +137,6 @@ function FlightPanel({ airportCode }: { airportCode: string }) {
         <p className="mt-2 text-[11px] text-gray-400">
           마지막 갱신 {formatTime(data.fetchedAt)} · 1시간 전~6시간 후 · 1분마다 자동 갱신 · 한국공항공사
         </p>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setScheduleOpen((o) => !o)}
-        className="mt-2 w-full rounded-lg bg-gray-50 py-2 text-xs font-semibold text-gray-600"
-      >
-        {scheduleOpen ? '국내선 시간표·운임 접기 ▲' : '오늘 국내선 시간표·운임 보기 ▼'}
-      </button>
-
-      {scheduleOpen && (
-        <div className="mt-2">
-          <label className="flex items-center gap-2 text-xs text-gray-600">
-            도착 공항
-            <select
-              value={dest}
-              onChange={(e) => setDest(e.target.value)}
-              className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs"
-            >
-              {DOMESTIC_AIRPORTS.filter((a) => a.code !== airportCode).map((a) => (
-                <option key={a.code} value={a.code}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {scheduleError && <p className="mt-2 text-xs text-red-600">시간표를 불러오지 못했습니다. {scheduleError}</p>}
-          {!schedule && !scheduleError && <p className="mt-2 text-xs text-gray-500">시간표 불러오는 중…</p>}
-          {schedule && schedule.flights.length === 0 && (
-            <p className="mt-2 text-xs text-gray-500">오늘 이 노선에 운항 예정인 항공편이 없습니다.</p>
-          )}
-          {schedule && schedule.flights.length > 0 && (
-            <table className="mt-2 w-full text-left text-xs">
-              <thead className="text-gray-400">
-                <tr>
-                  <th className="py-1 font-medium">출발→도착</th>
-                  <th className="py-1 font-medium">항공편</th>
-                  <th className="py-1 text-right font-medium">일반석</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {schedule.flights.map((f) => (
-                  <tr key={`${f.flightNo}-${f.departureTime}`}>
-                    <td className="py-1.5 font-semibold text-gray-900">
-                      {f.departureTime}
-                      {f.arrivalTime && <span className="font-normal text-gray-500">→{f.arrivalTime}</span>}
-                    </td>
-                    <td className="py-1.5 text-gray-600">
-                      {f.airline} {f.flightNo}
-                    </td>
-                    <td className="py-1.5 text-right text-gray-800">{fare(f.economyFare)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {schedule && (
-            <p className="mt-2 text-[11px] text-gray-400">운임은 기준 운임으로 실제 판매가와 다를 수 있음 · 국토교통부 TAGO</p>
-          )}
-        </div>
       )}
     </div>
   )

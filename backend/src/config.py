@@ -22,7 +22,7 @@ ARRIVALS_TTL = 20  # 실시간 도착 정보
 ROUTES_TTL = 60 * 60  # 정류장 경유 노선
 BUS_ROUTES_TTL = 24 * 60 * 60  # JTBIS 전체 노선 목록
 
-# 공공데이터포털(data.go.kr) 인증키: 한국공항공사 운항정보·TAGO 국내항공운항정보 공용.
+# 공공데이터포털(data.go.kr) 인증키: 한국공항공사 실시간 항공기 운항정보 검색.
 # 저장소에 넣지 않고 환경변수로 주입한다(로컬: backend/.env 대신 셸 환경변수, Cloud Run: --update-env-vars).
 # 포털의 'Encoding'/'Decoding' 키 어느 쪽을 넣어도 동작한다.
 DATA_GO_KR_SERVICE_KEY = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
@@ -30,11 +30,8 @@ DATA_GO_KR_SERVICE_KEY = os.environ.get("DATA_GO_KR_SERVICE_KEY", "").strip()
 # 한국공항공사 실시간 항공기 운항정보 검색 GW(2026-07 개시): 실시간 출발/도착 현황(XML/JSON, https)
 # 기존 openapi.airport.co.kr FlightStatusList를 대체한다.
 KAC_FLIGHT_STATUS_URL = "https://apis.data.go.kr/B551178/flight-search/info"
-# 국토교통부 TAGO 국내항공운항정보 v1.0: 출/도착 공항·날짜별 운항 스케줄과 운임(JSON)
-TAGO_FLIGHT_URL = "https://apis.data.go.kr/1613000/DmstcFlightNvgInfoService/getFlightOpratInfoList"
 
 FLIGHT_STATUS_TTL = 60  # 공항 실시간 운항 현황
-FLIGHT_SCHEDULE_TTL = 30 * 60  # 노선별 운항 스케줄·운임(제공기관 갱신주기 1시간)
 
 UPSTREAM_TIMEOUT = 8.0  # 외부 API 응답 대기(초)
 

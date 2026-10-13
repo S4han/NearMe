@@ -2,33 +2,31 @@
 
 외부 호출 없이 문자열만 다루므로 단위 테스트가 쉽다. 필드 정의는 docs/flight-api.md 참고.
 - 실시간 현황: 한국공항공사 실시간 항공기 운항정보 검색 GW flight-search/info(XML)
-- 스케줄·운임: TAGO 국내항공운항정보 getFlightOpratInfoList(JSON)
 """
 
-import json
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from typing import Any
 
 from services.jeju_bus import distance_m
 
-# 한국공항공사(KAC) 운영 국내 공항 14곳. code: IATA(KAC API), tagoId: TAGO 공항ID.
+# 한국공항공사(KAC) 운영 국내 공항 14곳. code: IATA(KAC API 공항코드).
 # 인천공항은 인천국제공항공사 소관이라 KAC 실시간 현황에 없으므로 제외한다.
 AIRPORTS: list[dict[str, Any]] = [
-    {"code": "GMP", "tagoId": "NAARKSS", "name": "김포국제공항", "shortName": "김포", "lat": 37.5583, "lng": 126.7906},
-    {"code": "PUS", "tagoId": "NAARKPK", "name": "김해국제공항", "shortName": "김해", "lat": 35.1795, "lng": 128.9382},
-    {"code": "CJU", "tagoId": "NAARKPC", "name": "제주국제공항", "shortName": "제주", "lat": 33.5113, "lng": 126.4930},
-    {"code": "TAE", "tagoId": "NAARKTN", "name": "대구국제공항", "shortName": "대구", "lat": 35.8941, "lng": 128.6589},
-    {"code": "CJJ", "tagoId": "NAARKTU", "name": "청주국제공항", "shortName": "청주", "lat": 36.7166, "lng": 127.4991},
-    {"code": "KWJ", "tagoId": "NAARKJJ", "name": "광주공항", "shortName": "광주", "lat": 35.1264, "lng": 126.8089},
-    {"code": "MWX", "tagoId": "NAARKJB", "name": "무안국제공항", "shortName": "무안", "lat": 34.9914, "lng": 126.3828},
-    {"code": "RSU", "tagoId": "NAARKJY", "name": "여수공항", "shortName": "여수", "lat": 34.8423, "lng": 127.6170},
-    {"code": "USN", "tagoId": "NAARKPU", "name": "울산공항", "shortName": "울산", "lat": 35.5935, "lng": 129.3517},
-    {"code": "KPO", "tagoId": "NAARKTH", "name": "포항경주공항", "shortName": "포항경주", "lat": 35.9879, "lng": 129.4204},
-    {"code": "HIN", "tagoId": "NAARKPS", "name": "사천공항", "shortName": "사천", "lat": 35.0886, "lng": 128.0704},
-    {"code": "YNY", "tagoId": "NAARKNY", "name": "양양국제공항", "shortName": "양양", "lat": 38.0613, "lng": 128.6692},
-    {"code": "KUV", "tagoId": "NAARKJK", "name": "군산공항", "shortName": "군산", "lat": 35.9038, "lng": 126.6158},
-    {"code": "WJU", "tagoId": "NAARKNW", "name": "원주공항", "shortName": "원주", "lat": 37.4381, "lng": 127.9604},
+    {"code": "GMP", "name": "김포국제공항", "shortName": "김포", "lat": 37.5583, "lng": 126.7906},
+    {"code": "PUS", "name": "김해국제공항", "shortName": "김해", "lat": 35.1795, "lng": 128.9382},
+    {"code": "CJU", "name": "제주국제공항", "shortName": "제주", "lat": 33.5113, "lng": 126.4930},
+    {"code": "TAE", "name": "대구국제공항", "shortName": "대구", "lat": 35.8941, "lng": 128.6589},
+    {"code": "CJJ", "name": "청주국제공항", "shortName": "청주", "lat": 36.7166, "lng": 127.4991},
+    {"code": "KWJ", "name": "광주공항", "shortName": "광주", "lat": 35.1264, "lng": 126.8089},
+    {"code": "MWX", "name": "무안국제공항", "shortName": "무안", "lat": 34.9914, "lng": 126.3828},
+    {"code": "RSU", "name": "여수공항", "shortName": "여수", "lat": 34.8423, "lng": 127.6170},
+    {"code": "USN", "name": "울산공항", "shortName": "울산", "lat": 35.5935, "lng": 129.3517},
+    {"code": "KPO", "name": "포항경주공항", "shortName": "포항경주", "lat": 35.9879, "lng": 129.4204},
+    {"code": "HIN", "name": "사천공항", "shortName": "사천", "lat": 35.0886, "lng": 128.0704},
+    {"code": "YNY", "name": "양양국제공항", "shortName": "양양", "lat": 38.0613, "lng": 128.6692},
+    {"code": "KUV", "name": "군산공항", "shortName": "군산", "lat": 35.9038, "lng": 126.6158},
+    {"code": "WJU", "name": "원주공항", "shortName": "원주", "lat": 37.4381, "lng": 127.9604},
 ]
 AIRPORTS_BY_CODE = {a["code"]: a for a in AIRPORTS}
 
@@ -121,63 +119,3 @@ def sort_flights(flights: list[dict[str, Any]]) -> list[dict[str, Any]]:
         seen.add(key)
         result.append(f)
     return result
-
-
-def _as_list(value: Any) -> list[dict[str, Any]]:
-    """TAGO JSON의 item은 1건이면 객체, 여러 건이면 배열, 0건이면 items가 빈 문자열."""
-    if isinstance(value, list):
-        return [v for v in value if isinstance(v, dict)]
-    if isinstance(value, dict):
-        return [value]
-    return []
-
-
-def _plan_time(value: Any) -> str | None:
-    """202012010820 → '08:20'."""
-    s = str(value or "").strip()
-    if len(s) != 12 or not s.isdigit():
-        return None
-    return f"{s[8:10]}:{s[10:12]}"
-
-
-def _charge(value: Any) -> int | None:
-    try:
-        n = int(value)
-    except (TypeError, ValueError):
-        return None
-    return n if n > 0 else None
-
-
-def parse_tago_schedule(text: str) -> list[dict[str, Any]]:
-    """TAGO getFlightOpratInfoList JSON → 운항 스케줄(출발 시각 순).
-
-    서비스키 오류 등은 JSON 요청이어도 XML로 응답하므로 함께 처리한다.
-    """
-    stripped = text.lstrip()
-    if stripped.startswith("<"):
-        _check_portal_error(ET.fromstring(stripped))
-        raise ValueError("unexpected XML response")
-    data = json.loads(text)
-    response = data.get("response", {}) if isinstance(data, dict) else {}
-    code = str(response.get("header", {}).get("resultCode", ""))
-    if code not in ("", "00"):
-        raise ValueError(f"TAGO resultCode={code}: {response.get('header', {}).get('resultMsg', '')}")
-    items = response.get("body", {}).get("items")
-    raw = _as_list(items.get("item") if isinstance(items, dict) else None)
-    flights = []
-    for d in raw:
-        dep = _plan_time(d.get("depPlandTime"))
-        if not dep:
-            continue
-        flights.append(
-            {
-                "flightNo": str(d.get("vihicleId", "")),  # API 필드명 오타(vihicle) 그대로
-                "airline": str(d.get("airlineNm", "")),
-                "departureTime": dep,
-                "arrivalTime": _plan_time(d.get("arrPlandTime")),
-                "economyFare": _charge(d.get("economyCharge")),
-                "businessFare": _charge(d.get("prestigeCharge")),
-            }
-        )
-    flights.sort(key=lambda f: (f["departureTime"], f["flightNo"]))
-    return flights

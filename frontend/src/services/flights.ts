@@ -1,4 +1,4 @@
-import type { Airport, FlightDirection, FlightScheduleResponse, FlightStatusResponse } from '../types/flight'
+import type { Airport, FlightDirection, FlightStatusResponse } from '../types/flight'
 import type { LatLng } from '../types/location'
 import type { NearbyPlace } from '../types/place'
 import { getJson } from './api'
@@ -28,26 +28,3 @@ export function fetchFlightStatus(code: string, direction: FlightDirection): Pro
   const params = new URLSearchParams({ direction })
   return getJson<FlightStatusResponse>(`/api/flights/airports/${encodeURIComponent(code)}/status?${params}`)
 }
-
-export function fetchFlightSchedule(dep: string, arr: string): Promise<FlightScheduleResponse> {
-  const params = new URLSearchParams({ dep, arr })
-  return getJson<FlightScheduleResponse>(`/api/flights/schedule?${params}`)
-}
-
-// 국내선 노선 선택용(Backend services/flights.py AIRPORTS와 같은 순서·코드)
-export const DOMESTIC_AIRPORTS = [
-  { code: 'GMP', name: '김포' },
-  { code: 'PUS', name: '김해' },
-  { code: 'CJU', name: '제주' },
-  { code: 'TAE', name: '대구' },
-  { code: 'CJJ', name: '청주' },
-  { code: 'KWJ', name: '광주' },
-  { code: 'MWX', name: '무안' },
-  { code: 'RSU', name: '여수' },
-  { code: 'USN', name: '울산' },
-  { code: 'KPO', name: '포항경주' },
-  { code: 'HIN', name: '사천' },
-  { code: 'YNY', name: '양양' },
-  { code: 'KUV', name: '군산' },
-  { code: 'WJU', name: '원주' },
-] as const

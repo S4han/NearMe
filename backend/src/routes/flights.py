@@ -1,8 +1,7 @@
-"""공항 API: 주변 공항, 공항 실시간 출발/도착 현황, 노선별 운항 스케줄·운임.
+"""공항 API: 주변 공항, 공항 실시간 출발/도착 현황.
 
 - 실시간 현황: 한국공항공사 실시간 항공기 운항정보 검색 GW(flight-search/info)
-- 스케줄·운임: 국토교통부 TAGO 국내항공운항정보 getFlightOpratInfoList
-두 API 모두 공공데이터포털 인증키(DATA_GO_KR_SERVICE_KEY)가 필요하다. 주변 공항 검색은 키 없이 동작한다.
+실시간 현황은 공공데이터포털 인증키(DATA_GO_KR_SERVICE_KEY)가 필요하다. 주변 공항 검색은 키 없이 동작한다.
 """
 
 from datetime import datetime
@@ -14,11 +13,9 @@ from fastapi import APIRouter, HTTPException, Path, Query
 import cache
 from config import (
     DATA_GO_KR_SERVICE_KEY,
-    FLIGHT_SCHEDULE_TTL,
     FLIGHT_STATUS_TTL,
     KAC_FLIGHT_STATUS_URL,
     KST,
-    TAGO_FLIGHT_URL,
 )
 from http_client import UpstreamError, fetch_text
 from services import flights
@@ -106,42 +103,4 @@ async def airport_status(
             "fetchedAt": now.isoformat(timespec="seconds"),
         }
         cache.set(key, data, FLIGHT_STATUS_TTL)
-    return data
-
-
-@router.get("/schedule")
-async def flight_schedule(
-    dep: str = Query(pattern=r"^[A-Z]{3}$", description="출발 공항 IATA 코드"),
-    arr: str = Query(pattern=r"^[A-Z]{3}$", description="도착 공항 IATA 코드"),
-    date: str | None = Query(None, pattern=r"^\d{8}$", description="출발일 YYYYMMDD (기본: 오늘)"),
-):
-    """국내선 노선(출발→도착)의 날짜별 운항 스케줄과 일반석·비즈니스석 운임."""
-    dep_airport, arr_airport = _airport(dep), _airport(arr)
-    if dep == arr:
-        raise HTTPException(status_code=400, detail="출발 공항과 도착 공항이 같습니다.")
-    date = date or _now().strftime("%Y%m%d")
-    key = f"flight_schedule:{dep}:{arr}:{date}"
-    data = cache.get(key)
-    if data is None:
-        params = {
-            "serviceKey": _service_key(),
-            "depAirportId": dep_airport["tagoId"],
-            "arrAirportId": arr_airport["tagoId"],
-            "depPlandTime": date,
-            "numOfRows": 200,
-            "pageNo": 1,
-            "_type": "json",
-        }
-        try:
-            schedule = flights.parse_tago_schedule(await fetch_text(f"{TAGO_FLIGHT_URL}?{urlencode(params)}"))
-        except (UpstreamError, ValueError) as e:
-            raise _upstream_failed(e) from e
-        data = {
-            "departure": {"code": dep, "name": dep_airport["name"]},
-            "arrival": {"code": arr, "name": arr_airport["name"]},
-            "date": date,
-            "flights": schedule,
-            "fetchedAt": _now().isoformat(timespec="seconds"),
-        }
-        cache.set(key, data, FLIGHT_SCHEDULE_TTL)
     return data

@@ -2,7 +2,6 @@
 
 export type Airport = {
   code: string // IATA (예: CJU)
-  tagoId: string
   name: string
   shortName: string
   lat: number
@@ -29,22 +28,5 @@ export type FlightStatusResponse = {
   airport: { code: string; name: string }
   direction: FlightDirection
   flights: FlightStatus[]
-  fetchedAt: string
-}
-
-export type ScheduledFlight = {
-  flightNo: string
-  airline: string
-  departureTime: string
-  arrivalTime: string | null
-  economyFare: number | null
-  businessFare: number | null
-}
-
-export type FlightScheduleResponse = {
-  departure: { code: string; name: string }
-  arrival: { code: string; name: string }
-  date: string
-  flights: ScheduledFlight[]
   fetchedAt: string
 }

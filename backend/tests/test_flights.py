@@ -1,9 +1,8 @@
-"""공항·항공편 응답 변환 테스트. 샘플은 한국공항공사 실시간 항공기 운항정보 검색 GW V1(2026-08), TAGO 국내항공운항정보 v1.0 활용가이드 예제 기반.
+"""공항·항공편 응답 변환 테스트. 샘플은 한국공항공사 실시간 항공기 운항정보 검색 GW V1(2026-08) 활용가이드 예제 기반.
 
 실행: backend 폴더에서 `python -m unittest discover tests`
 """
 
-import json
 import os
 import sys
 import unittest
@@ -34,30 +33,11 @@ GW_XML = """<response> <script/> <header> <resultCode>00</resultCode> <resultMsg
 PORTAL_ERROR_XML = """<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg><returnReasonCode>30</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>"""
 
 
-def tago_json(item):
-    return json.dumps(
-        {
-            "response": {
-                "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
-                "body": {"items": item, "numOfRows": 10, "pageNo": 1, "totalCount": 2},
-            }
-        },
-        ensure_ascii=False,
-    )
-
-
-TAGO_ITEMS = [
-    {"airlineNm": "대한항공", "arrAirportNm": "제주", "arrPlandTime": 202012011020, "depAirportNm": "광주", "depPlandTime": 202012010935, "economyCharge": 64900, "prestigeCharge": 0, "vihicleId": "KE1903"},
-    {"airlineNm": "아시아나항공", "arrAirportNm": "제주", "arrPlandTime": 202012010905, "depAirportNm": "광주", "depPlandTime": 202012010820, "economyCharge": 57900, "prestigeCharge": 0, "vihicleId": "OZ8141"},
-]
-
-
 class AirportsTest(unittest.TestCase):
-    def test_codes_unique_and_tago_ids(self):
+    def test_codes_unique(self):
         codes = [a["code"] for a in flights.AIRPORTS]
         self.assertEqual(len(codes), len(set(codes)))
-        self.assertEqual(flights.AIRPORTS_BY_CODE["CJU"]["tagoId"], "NAARKPC")
-        self.assertEqual(flights.AIRPORTS_BY_CODE["KWJ"]["tagoId"], "NAARKJJ")
+        self.assertEqual(flights.AIRPORTS_BY_CODE["CJU"]["name"], "제주국제공항")
 
     def test_nearby_from_jeju_city_hall(self):
         found = flights.find_nearby_airports(33.4996, 126.5312, 50000, 5)
@@ -132,38 +112,6 @@ class ParseFlightStatusTest(unittest.TestCase):
     def test_result_code_error(self):
         with self.assertRaises(ValueError):
             flights.parse_flight_status("<response><header><resultCode>99</resultCode></header></response>")
-
-
-class ParseTagoScheduleTest(unittest.TestCase):
-    def test_sorted_and_mapped(self):
-        schedule = flights.parse_tago_schedule(tago_json({"item": TAGO_ITEMS}))
-        self.assertEqual([f["flightNo"] for f in schedule], ["OZ8141", "KE1903"])
-        self.assertEqual(
-            schedule[0],
-            {
-                "flightNo": "OZ8141",
-                "airline": "아시아나항공",
-                "departureTime": "08:20",
-                "arrivalTime": "09:05",
-                "economyFare": 57900,
-                "businessFare": None,  # 0원 = 좌석 없음
-            },
-        )
-
-    def test_single_item_object(self):
-        self.assertEqual(len(flights.parse_tago_schedule(tago_json({"item": TAGO_ITEMS[0]}))), 1)
-
-    def test_empty_items(self):
-        self.assertEqual(flights.parse_tago_schedule(tago_json("")), [])
-
-    def test_portal_error_xml(self):
-        with self.assertRaisesRegex(ValueError, "30"):
-            flights.parse_tago_schedule(PORTAL_ERROR_XML)
-
-    def test_result_code_error(self):
-        text = json.dumps({"response": {"header": {"resultCode": "99", "resultMsg": "INVALID_REQUEST_PARAMETER_ERROR"}}})
-        with self.assertRaises(ValueError):
-            flights.parse_tago_schedule(text)
 
 
 if __name__ == "__main__":
