@@ -29,6 +29,15 @@ GW_XML = """<response> <script/> <header> <resultCode>00</resultCode> <resultMsg
 <item> <boardingKor>타이페이/타오위안</boardingKor> <boardingEng>TAOYUAN</boardingEng> <arrivedKor>제주</arrivedKor> <arrivedEng>JEJU</arrivedEng> <airlineKorean>이스타항공</airlineKorean> <airlineEnglish>EASTAR JET</airlineEnglish> <airFln>ZE886</airFln> <std>0605</std> <etd>0627</etd> <io>I</io> <line>국제</line> <gate>4</gate> <rmkKor>도착</rmkKor> <rmkEng>ARRIVED </rmkEng> <city>TPE</city> <airport>CJU</airport> </item>
 </items> </body> </response>"""
 
+# 2026-10-13 실측 응답(제주 출발 08:00~12:00, schFln 없이 호출) 발췌
+REAL_CJU_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header>
+<body><numOfRows>5</numOfRows><pageNo>1</pageNo><totalCount>83</totalCount><items>
+<item><boardingKor>제주</boardingKor><boardingEng>JEJU</boardingEng><arrivedKor>닝보</arrivedKor><arrivedEng>NINGBO</arrivedEng><airlineKorean>춘추항공</airlineKorean><airlineEnglish>SPRING AIRLINES</airlineEnglish><airFln>9C8626</airFln><std>0800</std><etd>0802</etd><io>O</io><line>국제</line><gate>22</gate><rmkKor>출발</rmkKor><rmkEng>DEPARTED</rmkEng><city>NGB</city><airport>CJU</airport></item>
+<item><boardingKor>제주</boardingKor><boardingEng>JEJU</boardingEng><arrivedKor>광주</arrivedKor><arrivedEng>GWANGJU</arrivedEng><airlineKorean>제주항공</airlineKorean><airlineEnglish>JEJU AIR</airlineEnglish><airFln>7C302</airFln><std>0810</std><etd>0828</etd><io>O</io><line>국내</line><gate>1A</gate><rmkKor>출발</rmkKor><rmkEng>DEPARTED</rmkEng><city>KWJ</city><airport>CJU</airport></item>
+<item><boardingKor>제주</boardingKor><boardingEng>JEJU</boardingEng><arrivedKor>양양</arrivedKor><arrivedEng>YANGYANG</arrivedEng><airlineKorean>파라타항공</airlineKorean><airlineEnglish>PARATA AIR</airlineEnglish><airFln>WE6702</airFln><std>0800</std><etd>0811</etd><io>O</io><line>국내</line><gate>5</gate><rmkKor>출발</rmkKor><rmkEng>DEPARTED</rmkEng><city>YNY</city><airport>CJU</airport></item>
+</items></body></response>"""
+
 # 공공데이터포털 게이트웨이 오류(인증키 미등록) — XML로만 응답
 PORTAL_ERROR_XML = """<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg><returnReasonCode>30</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>"""
 
@@ -104,6 +113,27 @@ class ParseFlightStatusTest(unittest.TestCase):
         self.assertEqual(items[0]["estimatedTime"], "00:16")
         arrival = items[2]
         self.assertEqual((arrival["direction"], arrival["counterpart"], arrival["gate"]), ("arrival", "타이페이/타오위안", "4"))
+
+    def test_real_cju_departures(self):
+        items, total = flights.parse_flight_status(REAL_CJU_XML)
+        self.assertEqual(total, 83)
+        ordered = flights.sort_flights(items)
+        self.assertEqual([f["flightNo"] for f in ordered], ["9C8626", "WE6702", "7C302"])
+        self.assertEqual(
+            ordered[2],
+            {
+                "flightNo": "7C302",
+                "airline": "제주항공",
+                "direction": "departure",
+                "counterpart": "광주",
+                "counterpartCode": "KWJ",
+                "international": False,
+                "scheduledTime": "08:10",
+                "estimatedTime": "08:28",
+                "status": "출발",
+                "gate": "1A",
+            },
+        )
 
     def test_portal_error(self):
         with self.assertRaisesRegex(ValueError, "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"):
