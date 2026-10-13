@@ -26,6 +26,16 @@ def _ssl_verify() -> ssl.SSLContext | bool:
     return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
 
+async def post_json(url: str, body: dict, headers: dict[str, str]) -> str:
+    try:
+        async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT, verify=_ssl_verify()) as client:
+            resp = await client.post(url, json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.text
+    except httpx.HTTPError as e:
+        raise UpstreamError(f"{type(e).__name__}: {e} ({url})") from e
+
+
 async def fetch_text(url: str) -> str:
     try:
         async with httpx.AsyncClient(

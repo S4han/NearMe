@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
+import { BACKEND_ENABLED } from '../config/api'
 import { directionsUrl, distanceMeters, formatDistance, placeDetailsUrl } from '../services/places'
 import type { LatLng } from '../types/location'
 import type { NearbyPlace } from '../types/place'
 import BusArrivalPanel from './BusArrivalPanel'
 import FlightPanel from './FlightPanel'
+import RouteEta from './RouteEta'
 
 export type SearchStatus = 'idle' | 'loading' | 'done' | 'error'
 
@@ -13,8 +15,10 @@ type PlaceListProps = {
   error: string
   selectedId: string | null
   onSelect: (id: string) => void
-  userLocation: LatLng | null // 있으면 거리는 내 위치 기준으로 표시(정렬·번호는 검색 지점 기준 유지)
+  userLocation: LatLng | null // 있으면 거리는 내 위치 기준으로 표시
   searchCenter: LatLng | null
+  sortByMe: boolean // true: 내 위치에서 가까운 순 / false: 검색 지점에서 가까운 순(번호 = 지도 마커 번호)
+  onSortByMeChange: (v: boolean) => void
 }
 
 // 검색 지점이 내 위치에서 이만큼 이상 떨어져 있으면 거리 앞에 '내 위치에서'를 붙여 구분
@@ -32,7 +36,17 @@ function Message({ icon, title, body }: { icon: string; title: string; body?: st
   )
 }
 
-function PlaceList({ status, places, error, selectedId, onSelect, userLocation, searchCenter }: PlaceListProps) {
+function PlaceList({
+  status,
+  places,
+  error,
+  selectedId,
+  onSelect,
+  userLocation,
+  searchCenter,
+  sortByMe,
+  onSortByMeChange,
+}: PlaceListProps) {
   // 지도를 옮겨 다른 지역을 검색해도, 길을 모르는 사용자에게 필요한 건 지금 내 위치에서의 거리
   const searchedAway =
     userLocation !== null && searchCenter !== null && distanceMeters(userLocation, searchCenter) >= FAR_FROM_ME_M
@@ -70,65 +84,90 @@ function PlaceList({ status, places, error, selectedId, onSelect, userLocation, 
     return <Message icon="🔍" title="결과가 없습니다" body="반경을 넓히거나 지도를 옮겨 다시 검색해 보세요." />
   }
 
+  const sortTab = (mine: boolean, label: string) => (
+    <button
+      type="button"
+      onClick={() => onSortByMeChange(mine)}
+      aria-pressed={sortByMe === mine}
+      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+        sortByMe === mine ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'
+      }`}
+    >
+      {label}
+    </button>
+  )
+
   return (
-    <ul className="space-y-2">
-      {places.map((p, i) => {
-        const isSelected = p.id === selectedId
-        return (
-          <li
-            key={p.id}
-            id={`place-${p.id}`}
-            className={`rounded-2xl p-3 transition ${
-              isSelected ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-white ring-1 ring-gray-100 hover:bg-gray-50'
-            }`}
-          >
-            <button type="button" onClick={() => onSelect(p.id)} className="flex w-full gap-3 text-left">
-              <span
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
-                  isSelected ? 'bg-red-600' : 'bg-blue-600'
-                }`}
-              >
-                {i + 1}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-baseline justify-between gap-2">
-                  <span className="truncate font-semibold text-gray-900">{p.name}</span>
-                  <span className="shrink-0 text-xs font-medium text-gray-500">{distanceLabel(p)}</span>
+    <>
+      {/* 다른 지역을 검색했을 때만 의미가 있으므로 그때만 정렬 기준 선택을 보여준다 */}
+      {searchedAway && places.length > 1 && (
+        <div className="mb-2 flex justify-end">
+          <div className="flex rounded-full bg-gray-100 p-1" role="group" aria-label="정렬 기준">
+            {sortTab(false, '검색 지역순')}
+            {sortTab(true, '내 위치에서 가까운 순')}
+          </div>
+        </div>
+      )}
+      <ul className="space-y-2">
+        {places.map((p, i) => {
+          const isSelected = p.id === selectedId
+          return (
+            <li
+              key={p.id}
+              id={`place-${p.id}`}
+              className={`rounded-2xl p-3 transition ${
+                isSelected ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-white ring-1 ring-gray-100 hover:bg-gray-50'
+              }`}
+            >
+              <button type="button" onClick={() => onSelect(p.id)} className="flex w-full gap-3 text-left">
+                <span
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
+                    isSelected ? 'bg-red-600' : 'bg-blue-600'
+                  }`}
+                >
+                  {i + 1}
                 </span>
-                {p.typeLabel && <span className="block text-xs text-blue-600">{p.typeLabel}</span>}
-                {p.address && <span className="mt-0.5 block truncate text-xs text-gray-500">{p.address}</span>}
-                {p.kind === 'busStop' && !isSelected && (
-                  <span className="mt-1 block text-xs font-semibold text-blue-600">눌러서 실시간 도착 정보 보기 ›</span>
-                )}
-                {p.kind === 'airport' && !isSelected && (
-                  <span className="mt-1 block text-xs font-semibold text-blue-600">눌러서 실시간 출발·도착 현황 보기 ›</span>
-                )}
-              </span>
-            </button>
-            <div className="mt-2 flex gap-2 pl-10">
-              <a
-                href={placeDetailsUrl(p)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200"
-              >
-                {p.kind === 'google' ? '상세정보' : '지도에서 보기'}
-              </a>
-              <a
-                href={directionsUrl(p)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-              >
-                길찾기
-              </a>
-            </div>
-            {p.kind === 'busStop' && isSelected && <BusArrivalPanel stationId={p.id} />}
-            {p.kind === 'airport' && isSelected && <FlightPanel airportCode={p.id} />}
-          </li>
-        )
-      })}
-    </ul>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="truncate font-semibold text-gray-900">{p.name}</span>
+                    <span className="shrink-0 text-xs font-medium text-gray-500">{distanceLabel(p)}</span>
+                  </span>
+                  {p.typeLabel && <span className="block text-xs text-blue-600">{p.typeLabel}</span>}
+                  {p.address && <span className="mt-0.5 block truncate text-xs text-gray-500">{p.address}</span>}
+                  {p.kind === 'busStop' && !isSelected && (
+                    <span className="mt-1 block text-xs font-semibold text-blue-600">눌러서 실시간 도착 정보 보기 ›</span>
+                  )}
+                  {p.kind === 'airport' && !isSelected && (
+                    <span className="mt-1 block text-xs font-semibold text-blue-600">눌러서 실시간 출발·도착 현황 보기 ›</span>
+                  )}
+                </span>
+              </button>
+              <div className="mt-2 flex gap-2 pl-10">
+                <a
+                  href={placeDetailsUrl(p)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200"
+                >
+                  {p.kind === 'google' ? '상세정보' : '지도에서 보기'}
+                </a>
+                <a
+                  href={directionsUrl(p)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                >
+                  길찾기
+                </a>
+              </div>
+              {isSelected && userLocation && BACKEND_ENABLED && <RouteEta from={userLocation} to={p.location} />}
+              {p.kind === 'busStop' && isSelected && <BusArrivalPanel stationId={p.id} />}
+              {p.kind === 'airport' && isSelected && <FlightPanel airportCode={p.id} />}
+            </li>
+          )
+        })}
+      </ul>
+    </>
   )
 }
 

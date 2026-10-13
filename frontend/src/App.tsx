@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   categories,
   DEFAULT_RADIUS,
@@ -13,7 +13,7 @@ import BottomSheet from './components/BottomSheet'
 import PlaceList, { type SearchStatus } from './components/PlaceList'
 import { LocateIcon, SearchIcon, Spinner } from './components/icons'
 import { useGeolocation, type GeoStatus } from './hooks/useGeolocation'
-import { searchNearbyPlaces } from './services/places'
+import { distanceMeters, searchNearbyPlaces } from './services/places'
 import { isInJeju, searchNearbyBusStations } from './services/bus'
 import { AIRPORT_SEARCH_RADIUS, searchNearbyAirports } from './services/flights'
 import type { LatLng } from './types/location'
@@ -45,6 +45,7 @@ function App() {
   // 휴대폰: 검색하면 카테고리 메뉴를 한 줄로 접고, '이 지역 검색' 버튼은 지도를 직접 움직였을 때만 표시
   const [menuOpen, setMenuOpen] = useState(true)
   const [mapMoved, setMapMoved] = useState(false)
+  const [sortByMe, setSortByMe] = useState(false)
 
   const selected = categories.find((c) => c.id === category)!
 
@@ -139,6 +140,16 @@ function App() {
   const geoMessage = geoMessages[geoStatus]
   const isSearching = searchStatus === 'loading'
   // 아직 검색 전·내 위치로 이동함(searchCenter 초기화)·지도를 끌었음·검색 실패 시에만 버튼 표시
+  // 정렬 기준에 따라 목록과 지도 마커 번호를 함께 바꾼다(번호 = 마커 번호 유지)
+  // (새 배열을 매 렌더마다 만들면 지도의 결과 맞춤이 계속 다시 실행되므로 memo)
+  const shownPlaces = useMemo(
+    () =>
+      sortByMe && userLocation
+        ? [...places].sort((a, b) => distanceMeters(userLocation, a.location) - distanceMeters(userLocation, b.location))
+        : places,
+    [places, sortByMe, userLocation],
+  )
+
   const showSearchButton =
     isSearching || searchCenter === null || mapMoved || searchStatus === 'error'
 
@@ -149,7 +160,7 @@ function App() {
         <MapView
           userLocation={userLocation}
           searchCenter={searchCenter}
-          places={places}
+          places={shownPlaces}
           selectedId={selectedId}
           onSelectPlace={handleSelect}
           onCenterChange={setMapCenter}
@@ -215,12 +226,14 @@ function App() {
         >
           <PlaceList
             status={searchStatus}
-            places={places}
+            places={shownPlaces}
             error={searchError}
             selectedId={selectedId}
             onSelect={handleSelect}
             userLocation={userLocation}
             searchCenter={searchCenter}
+            sortByMe={sortByMe}
+            onSortByMeChange={setSortByMe}
           />
         </BottomSheet>
       </div>
