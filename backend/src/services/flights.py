@@ -1,7 +1,7 @@
 """공항·항공편 데이터: 국내 공항 목록과 운항정보 API 응답을 NearMe 표준 JSON 형태로 변환.
 
 외부 호출 없이 문자열만 다루므로 단위 테스트가 쉽다. 필드 정의는 docs/flight-api.md 참고.
-- 실시간 현황: 한국공항공사 getFlightStatusList(XML)
+- 실시간 현황: 한국공항공사 실시간 항공기 운항정보 검색 GW flight-search/info(XML)
 - 스케줄·운임: TAGO 국내항공운항정보 getFlightOpratInfoList(JSON)
 """
 
@@ -77,7 +77,7 @@ def _check_portal_error(root: ET.Element) -> None:
 
 
 def parse_flight_status(xml_text: str) -> tuple[list[dict[str, Any]], int]:
-    """KAC getFlightStatusList XML → (항공편 목록, totalCount)."""
+    """KAC flight-search/info XML → (항공편 목록, totalCount)."""
     root = ET.fromstring(xml_text)
     _check_portal_error(root)
     flights = []

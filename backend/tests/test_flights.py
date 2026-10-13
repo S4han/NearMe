@@ -1,4 +1,4 @@
-"""공항·항공편 응답 변환 테스트. 샘플은 한국공항공사 운항정보 OpenAPI v2.1, TAGO 국내항공운항정보 v1.0 활용가이드 예제 기반.
+"""공항·항공편 응답 변환 테스트. 샘플은 한국공항공사 실시간 항공기 운항정보 검색 GW V1(2026-08), TAGO 국내항공운항정보 v1.0 활용가이드 예제 기반.
 
 실행: backend 폴더에서 `python -m unittest discover tests`
 """
@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from config import KST  # noqa: E402
 from services import flights  # noqa: E402
 
-# KAC getFlightStatusList: 가이드 예제(김해 국제선 도착) + 국내선 출발편, 페이지 경계 중복 항목
+# KAC 이전 API(getFlightStatusList) 예제 형식 — GW도 필드가 같다: 김해 국제선 도착 + 국내선 출발편, 페이지 경계 중복 항목
 STATUS_XML = """<?xml version="1.0" encoding="UTF-8"?><response><header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header><body><items>
 <item><airFln>LJ074</airFln><airlineEnglish>JINAIR</airlineEnglish><airlineKorean>진에어</airlineKorean><airport>PUS</airport><arrivedEng>GIMHAE</arrivedEng><arrivedKor>부산/김해</arrivedKor><boardingEng>DANANG</boardingEng><boardingKor>다낭</boardingKor><city>DAD</city><etd>0619</etd><gate>5</gate><io>I</io><line>국제</line><rmkEng>ARRIVED </rmkEng><rmkKor>도착</rmkKor><std>0605</std></item>
 <item><airFln>7C102</airFln><airlineEnglish>JEJU AIR</airlineEnglish><airlineKorean>제주항공</airlineKorean><airport>PUS</airport><arrivedEng>JEJU</arrivedEng><arrivedKor>제주</arrivedKor><boardingEng>GIMHAE</boardingEng><boardingKor>부산/김해</boardingKor><city>CJU</city><etd>0600</etd><io>O</io><line>국내</line><rmkEng>DEPARTED</rmkEng><rmkKor>출발</rmkKor><std>0600</std></item>
@@ -22,6 +22,13 @@ STATUS_XML = """<?xml version="1.0" encoding="UTF-8"?><response><header><resultC
 <item><airFln>7C102</airFln><airlineKorean>제주항공</airlineKorean><arrivedKor>제주</arrivedKor><io>O</io><line>국내</line><std>0600</std></item>
 <item><airFln></airFln><std>0700</std></item>
 </items><numOfRows>10</numOfRows><pageNo>1</pageNo><totalCount>105</totalCount></body></response>"""
+
+# KAC GW flight-search/info 가이드 예제 응답(발췌): <script/>, 빈 <gate/> 포함
+GW_XML = """<response> <script/> <header> <resultCode>00</resultCode> <resultMsg>NORMAL SERVICE.</resultMsg> </header> <body> <numOfRows>10</numOfRows> <pageNo>1</pageNo> <totalCount>1740</totalCount> <items>
+<item> <boardingKor>청주</boardingKor> <boardingEng>CHEONGJU</boardingEng> <arrivedKor>상하이/푸동</arrivedKor> <arrivedEng>PUDONG</arrivedEng> <airlineKorean>이스타항공</airlineKorean> <airlineEnglish>EASTAR JET</airlineEnglish> <airFln>ZE821A</airFln> <std>0005</std> <etd>0016</etd> <io>O</io> <line>국제</line> <gate/> <rmkKor>출발</rmkKor> <rmkEng>DEPARTED</rmkEng> <city>PVG</city> <airport>CJJ</airport> </item>
+<item> <boardingKor>서울/김포</boardingKor> <boardingEng>GIMPO</boardingEng> <arrivedKor>제주</arrivedKor> <arrivedEng>JEJU</arrivedEng> <airlineKorean>파라타항공</airlineKorean> <airlineEnglish>PARATA AIR</airlineEnglish> <airFln>WE6501</airFln> <std>0600</std> <etd>0620</etd> <io>O</io> <line>국내</line> <gate>13</gate> <rmkKor>출발</rmkKor> <rmkEng>DEPARTED</rmkEng> <city>CJU</city> <airport>GMP</airport> </item>
+<item> <boardingKor>타이페이/타오위안</boardingKor> <boardingEng>TAOYUAN</boardingEng> <arrivedKor>제주</arrivedKor> <arrivedEng>JEJU</arrivedEng> <airlineKorean>이스타항공</airlineKorean> <airlineEnglish>EASTAR JET</airlineEnglish> <airFln>ZE886</airFln> <std>0605</std> <etd>0627</etd> <io>I</io> <line>국제</line> <gate>4</gate> <rmkKor>도착</rmkKor> <rmkEng>ARRIVED </rmkEng> <city>TPE</city> <airport>CJU</airport> </item>
+</items> </body> </response>"""
 
 # 공공데이터포털 게이트웨이 오류(인증키 미등록) — XML로만 응답
 PORTAL_ERROR_XML = """<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE ERROR</errMsg><returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg><returnReasonCode>30</returnReasonCode></cmmMsgHeader></OpenAPI_ServiceResponse>"""
@@ -107,6 +114,16 @@ class ParseFlightStatusTest(unittest.TestCase):
         departures = [f for f in flights.sort_flights(items) if f["direction"] == "departure"]
         self.assertEqual([f["flightNo"] for f in departures], ["BX8101", "7C102"])
         self.assertIsNone(departures[0]["status"])
+
+    def test_gw_example(self):
+        items, total = flights.parse_flight_status(GW_XML)
+        self.assertEqual(total, 1740)
+        self.assertEqual([f["flightNo"] for f in items], ["ZE821A", "WE6501", "ZE886"])
+        self.assertIsNone(items[0]["gate"])  # 빈 <gate/>
+        self.assertEqual(items[0]["counterpart"], "상하이/푸동")
+        self.assertEqual(items[0]["estimatedTime"], "00:16")
+        arrival = items[2]
+        self.assertEqual((arrival["direction"], arrival["counterpart"], arrival["gate"]), ("arrival", "타이페이/타오위안", "4"))
 
     def test_portal_error(self):
         with self.assertRaisesRegex(ValueError, "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"):

@@ -1,6 +1,6 @@
 """공항 API: 주변 공항, 공항 실시간 출발/도착 현황, 노선별 운항 스케줄·운임.
 
-- 실시간 현황: 한국공항공사 항공기 운항정보 getFlightStatusList
+- 실시간 현황: 한국공항공사 실시간 항공기 운항정보 검색 GW(flight-search/info)
 - 스케줄·운임: 국토교통부 TAGO 국내항공운항정보 getFlightOpratInfoList
 두 API 모두 공공데이터포털 인증키(DATA_GO_KR_SERVICE_KEY)가 필요하다. 주변 공항 검색은 키 없이 동작한다.
 """
@@ -85,6 +85,9 @@ async def airport_status(
             "schStTime": start,
             "schEdTime": end,
             "numOfRows": STATUS_PAGE_SIZE,
+            "type": "xml",
+            # schFln(편명)은 가이드상 필수로 표기되어 있으나 예제 응답은 편명과 무관한 전체 목록이다.
+            # 공항 전체 현황이 목적이므로 보내지 않는다(실제 키로 확인 필요, docs/flight-api.md).
         }
         collected: list[dict[str, Any]] = []
         try:
