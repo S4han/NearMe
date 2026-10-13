@@ -132,6 +132,14 @@ gcloud run deploy nearme-api \
 - `--min-instances 0`: 요청이 없으면 0대로 줄어 비용이 들지 않는다(대신 첫 요청이 1~3초 느릴 수 있음).
 - `--max-instances 2`: 비정상 트래픽에도 비용이 커지지 않도록 상한을 둔다.
 
+## Frontend 배포 (Cloudflare Workers)
+
+- `claude/new-session-f23yq3`에 병합하면 Cloudflare가 자동으로 빌드·배포한다(빌드 변수 `VITE_API_BASE_URL`, `VITE_GOOGLE_MAPS_API_KEY`는 Cloudflare 설정에 등록).
+- 직접 `npx wrangler deploy` 하지 않는다. 자동 배포된 최신 버전을 예전 코드로 덮어쓸 수 있다.
+- PR 미리보기 빌드(`Workers Builds: nearme`)는 0초 만에 실패하는 경우가 있으나 운영 배포와 무관하다.
+- 병합 후 배포 탭에 해당 `Merge pull request` 빌드가 없으면(GitHub 알림 누락) 배포 브랜치에 새 커밋이 들어갈 때 함께 배포된다.
+- 배포 단계에서 Cloudflare API `504 Gateway Timeout`으로 실패하면 배포 탭에서 다시 시도한다.
+
 ## 배포용 빌드
 
 ```powershell
