@@ -9,6 +9,7 @@ type BottomSheetProps = {
   subtitle: string
   radius: SearchRadius
   onRadiusChange: (r: SearchRadius) => void
+  showRadius: boolean // 반경이 검색에 쓰이지 않는 카테고리(공항)에서는 숨김
   onLocate: () => void
   locating: boolean
   children: ReactNode
@@ -22,6 +23,7 @@ function BottomSheet({
   subtitle,
   radius,
   onRadiusChange,
+  showRadius,
   onLocate,
   locating,
   children,
@@ -52,21 +54,23 @@ function BottomSheet({
           <p className="truncate text-base font-bold">{title}</p>
           <p className="truncate text-xs text-gray-500">{subtitle}</p>
         </button>
-        <div className="flex shrink-0 rounded-full bg-gray-100 p-1" role="group" aria-label="검색 반경">
-          {radiusOptions.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => onRadiusChange(r)}
-              aria-pressed={r === radius}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                r === radius ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              {r / 1000}km
-            </button>
-          ))}
-        </div>
+        {showRadius && (
+          <div className="flex shrink-0 rounded-full bg-gray-100 p-1" role="group" aria-label="검색 반경">
+            {radiusOptions.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => onRadiusChange(r)}
+                aria-pressed={r === radius}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  r === radius ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                {r / 1000}km
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div

@@ -18,8 +18,8 @@ export async function searchNearbyAirports(center: LatLng): Promise<NearbyPlace[
     kind: 'airport',
     name: a.name,
     location: { lat: a.lat, lng: a.lng },
-    address: a.code,
-    typeLabel: '공항 · 실시간 운항정보',
+    address: '',
+    typeLabel: `공항 · ${a.code}`,
     distance: a.distance,
   }))
 }
