@@ -29,7 +29,7 @@ function BottomSheet({
   children,
 }: BottomSheetProps) {
   return (
-    <section className="pointer-events-auto relative flex flex-col rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:min-h-0 md:flex-1 md:rounded-3xl md:shadow-lg md:ring-1 md:ring-black/5">
+    <section id="nm-sheet" className="pointer-events-auto relative flex flex-col rounded-t-3xl bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:min-h-0 md:flex-1 md:rounded-3xl md:shadow-lg md:ring-1 md:ring-black/5">
       <button
         type="button"
         onClick={onLocate}

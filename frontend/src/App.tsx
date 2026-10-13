@@ -42,6 +42,9 @@ function App() {
   const [searchError, setSearchError] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  // 휴대폰: 검색하면 카테고리 메뉴를 한 줄로 접고, '이 지역 검색' 버튼은 지도를 직접 움직였을 때만 표시
+  const [menuOpen, setMenuOpen] = useState(true)
+  const [mapMoved, setMapMoved] = useState(false)
 
   const selected = categories.find((c) => c.id === category)!
 
@@ -65,6 +68,8 @@ function App() {
     const cat = categories.find((c) => c.id === searchCategory)!
     const seq = ++searchSeq.current
     setSearchCenter(center)
+    setMenuOpen(false)
+    setMapMoved(false)
     setSearchStatus('loading')
     setSelectedId(null)
     setSheetOpen(true)
@@ -103,7 +108,10 @@ function App() {
   // (검색 후 지도가 결과에 맞춰 자동 이동해도 기준점이 따라 움직이지 않도록)
   // 이미 선택된 것을 다시 누르면 호출하지 않음(비용 절약)
   const handleCategoryChange = (c: PlaceCategory) => {
-    if (c === category) return
+    if (c === category) {
+      setMenuOpen(false) // 펼친 메뉴에서 같은 카테고리를 누르면 다시 접기만 한다
+      return
+    }
     setCategory(c)
     runSearch(c, radius, searchCenter ?? mapCenter)
   }
@@ -130,6 +138,9 @@ function App() {
 
   const geoMessage = geoMessages[geoStatus]
   const isSearching = searchStatus === 'loading'
+  // 아직 검색 전·내 위치로 이동함(searchCenter 초기화)·지도를 끌었음·검색 실패 시에만 버튼 표시
+  const showSearchButton =
+    isSearching || searchCenter === null || mapMoved || searchStatus === 'error'
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-gray-100 font-sans text-gray-900">
@@ -142,6 +153,7 @@ function App() {
           selectedId={selectedId}
           onSelectPlace={handleSelect}
           onCenterChange={setMapCenter}
+          onUserMove={() => setMapMoved(true)}
         />
       </div>
 
@@ -157,12 +169,17 @@ function App() {
 
       {/* 떠 있는 UI: 모바일은 상단 바 + 하단 시트, 데스크톱은 왼쪽 패널 */}
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between md:inset-y-4 md:right-auto md:left-4 md:w-[420px] md:justify-start md:gap-3">
-        <div className="flex flex-col items-center gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:items-stretch md:p-0">
+        <div
+          id="nm-top"
+          className="flex flex-col items-center gap-2 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:items-stretch md:p-0"
+        >
           <div className="w-full">
             <TopBar
               category={category}
               onCategoryChange={handleCategoryChange}
               backendStatus={BACKEND_ENABLED ? backendStatus : undefined}
+              collapsed={!menuOpen}
+              onExpand={() => setMenuOpen(true)}
             />
           </div>
 
@@ -172,15 +189,17 @@ function App() {
             </p>
           )}
 
-          <button
-            type="button"
-            onClick={handleSearch}
-            disabled={isSearching}
-            className="pointer-events-auto flex items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-95 disabled:opacity-70 md:py-3"
-          >
-            {isSearching ? <Spinner /> : <SearchIcon />}
-            {isSearching ? '검색 중…' : `이 지역 ${selected.name} 검색`}
-          </button>
+          {showSearchButton && (
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={isSearching}
+              className="pointer-events-auto flex items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-95 disabled:opacity-70 md:py-3"
+            >
+              {isSearching ? <Spinner /> : <SearchIcon />}
+              {isSearching ? '검색 중…' : `이 지역 ${selected.name} 검색`}
+            </button>
+          )}
         </div>
 
         <BottomSheet
