@@ -101,7 +101,9 @@ async def airport_status(
         data = {
             "airport": {"code": code, "name": airport["name"]},
             "direction": direction,
-            "flights": [f for f in flights.sort_flights(collected) if f["direction"] == direction],
+            "flights": flights.merge_codeshares(
+                [f for f in flights.sort_flights(collected) if f["direction"] == direction]
+            ),
             "fetchedAt": now.isoformat(timespec="seconds"),
         }
         cache.set(key, data, FLIGHT_STATUS_TTL)

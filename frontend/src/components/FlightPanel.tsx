@@ -38,6 +38,11 @@ function FlightRow({ f }: { f: FlightStatus }) {
           {f.airline} {f.flightNo}
           {f.gate && ` · 게이트 ${f.gate}`}
         </span>
+        {f.codeshares.length > 0 && (
+          <span className="block truncate text-[11px] text-gray-400">
+            공동운항 {f.codeshares.map((c) => `${c.airline} ${c.flightNo}`).join(', ')}
+          </span>
+        )}
       </span>
       {f.status && (
         <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${statusColor(f.status)}`}>{f.status}</span>

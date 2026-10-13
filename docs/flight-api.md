@@ -31,12 +31,16 @@
 {"airport": {"code": "CJU", "name": "제주국제공항"}, "direction": "departure",
  "flights": [{"flightNo": "7C102", "airline": "제주항공", "direction": "departure", "counterpart": "김포",
               "counterpartCode": "GMP", "international": false, "scheduledTime": "06:00",
-              "estimatedTime": "06:15", "status": "지연", "gate": "5"}],
+              "estimatedTime": "06:15", "status": "지연", "gate": "5",
+              "codeshares": [{"flightNo": "KE5102", "airline": "대한항공"}]}],
  "fetchedAt": "2026-10-12T09:30:00+09:00"}
 ```
 
 - `estimatedTime`: 변경 시각. 예정 시각과 같으면 `null`.
 - `status`: 공항공사 `rmkKor` 그대로(출발, 도착, 지연, 결항, 탑승중, 마감 등). 없으면 `null`.
+- `codeshares`: 같은 비행기의 공동운항 편명. 방향·예정/변경 시각·상대 공항·게이트·상태가 모두 같으면 한 줄로 합친다
+  (실측 예: 진에어 LJ472 = 대한항공 KE5242). 게이트가 없으면 다른 비행기일 수 있어 합치지 않는다.
+  API가 실제 운항사를 알려주지 않으므로 숫자 자릿수가 적은 편명을 대표로 둔다(판매용 편명이 보통 4자리) — 추정이며 틀릴 수 있다.
 
 ## 1. 한국공항공사 실시간 항공기 운항정보 검색 GW — 실시간 현황
 
