@@ -6,6 +6,7 @@ export const categories = [
   { id: 'parking', name: '주차장', icon: '🅿️', googleTypes: ['parking'] },
   { id: 'hospital', name: '병원', icon: '🏥', googleTypes: ['hospital', 'doctor'] },
   { id: 'bus_stop', name: '버스 정류소', icon: '🚌', googleTypes: ['bus_stop', 'bus_station'] },
+  { id: 'airport', name: '공항', icon: '✈️', googleTypes: ['airport'] },
   { id: 'tourist_attraction', name: '관광지', icon: '🏝️', googleTypes: ['tourist_attraction'] },
 ] as const
 

@@ -8,9 +8,9 @@ from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 from config import ALLOWED_ORIGINS  # noqa: E402
-from routes import bus  # noqa: E402
+from routes import bus, flights  # noqa: E402
 
-app = FastAPI(title="NearMe Backend", version="1.1.0")
+app = FastAPI(title="NearMe Backend", version="1.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,3 +26,4 @@ async def health_check():
 
 
 app.include_router(bus.router)
+app.include_router(flights.router)
