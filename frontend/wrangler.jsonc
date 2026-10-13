@@ -1,5 +1,7 @@
 // Cloudflare Workers 배포 설정: Vite 빌드 결과물(dist)만 정적 파일로 배포
 // Cloudflare 빌드 설정 → Root directory: frontend / Build command: npm run build / Deploy command: npx wrangler deploy
+// 운영 배포는 claude/new-session-f23yq3 병합 시 자동 빌드로만 한다. 로컬·Cloud Shell에서 직접 `wrangler deploy`하면
+// 자동 배포된 최신 버전을 예전 코드(또는 VITE_* 빌드 변수가 빠진 빌드)로 덮어쓸 수 있다(2026-10-13 발생).
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "nearme",
