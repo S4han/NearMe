@@ -85,8 +85,9 @@ npm run dev
 | GET | `/api/bus/stations/{stationId}/routes` | 정류장 경유 노선(1시간 캐시) |
 | GET | `/api/flights/airports/nearby?lat=&lng=&radius=50000` | 주변 공항(가까운 순, 키 불필요) |
 | GET | `/api/flights/airports/{CODE}/status?direction=departure` | 공항 실시간 출발/도착 현황(1분 캐시) |
+| GET | `/api/routes/eta?from_lat=&from_lng=&to_lat=&to_lng=` | 내 위치→장소 도보·자동차 소요 시간(T map, 10분 캐시) |
 
-데이터 출처와 응답 필드는 [`docs/jeju-bus-api.md`](docs/jeju-bus-api.md), [`docs/flight-api.md`](docs/flight-api.md) 참고.
+데이터 출처와 응답 필드는 [`docs/jeju-bus-api.md`](docs/jeju-bus-api.md), [`docs/flight-api.md`](docs/flight-api.md), [`docs/route-eta-api.md`](docs/route-eta-api.md) 참고.
 
 ### 항공 운항정보 인증키
 
@@ -125,7 +126,7 @@ gcloud run deploy nearme-api \
   --memory 512Mi
 ```
 
-- 항공 운항정보 인증키는 처음 한 번 등록한다(이후 배포에도 유지됨):
+- 항공 운항정보·T map 키는 처음 한 번 등록한다(이후 배포에도 유지됨). T map은 `--update-env-vars TMAP_APP_KEY=앱키`로 같은 방식:
   `gcloud run services update nearme-api --region asia-east1 --update-env-vars DATA_GO_KR_SERVICE_KEY=발급받은_인증키`
 
 - 배포가 끝나면 표시되는 `Service URL`을 Cloudflare Frontend 빌드 변수 `VITE_API_BASE_URL`에 등록한다.

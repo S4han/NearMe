@@ -34,6 +34,14 @@ KAC_FLIGHT_STATUS_URL = "https://apis.data.go.kr/B551178/flight-search/info"
 
 FLIGHT_STATUS_TTL = 60  # 공항 실시간 운항 현황
 
+# T map(SK open API) 경로 안내: 도보·자동차 소요 시간. Google은 한국에서 도보·자동차 길찾기를 제공하지 않는다.
+# 키는 DATA_GO_KR_SERVICE_KEY와 같은 방식으로 환경변수로만 주입한다.
+TMAP_APP_KEY = os.environ.get("TMAP_APP_KEY", "").strip().strip("'\"").strip()
+TMAP_PEDESTRIAN_URL = "https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1"
+TMAP_CAR_URL = "https://apis.openapi.sk.com/tmap/routes?version=1"
+ETA_TTL = 10 * 60  # 같은 구간(약 10m 단위로 반올림한 좌표) 재조회 방지
+WALK_MAX_M = 10_000  # 직선거리가 이보다 멀면 도보 경로는 조회하지 않음
+
 UPSTREAM_TIMEOUT = 8.0  # 외부 API 응답 대기(초)
 
 # 브라우저에서 Backend를 직접 호출할 수 있는 Frontend 주소
