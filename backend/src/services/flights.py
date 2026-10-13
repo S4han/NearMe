@@ -119,3 +119,48 @@ def sort_flights(flights: list[dict[str, Any]]) -> list[dict[str, Any]]:
         seen.add(key)
         result.append(f)
     return result
+
+
+def _flight_digits(flight_no: str) -> int:
+    """편명의 숫자 자릿수(KE5242 → 4). 숫자가 없으면 크게 잡아 뒤로 보낸다."""
+    digits = sum(c.isdigit() for c in flight_no[2:])
+    return digits or 99
+
+
+def merge_codeshares(flights: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """공동운항편(같은 비행기를 여러 항공사 편명으로 판매)을 한 줄로 합친다.
+
+    방향·예정/변경 시각·상대 공항·게이트·상태가 모두 같으면 같은 비행기로 본다.
+    게이트가 없으면 같은 시각 같은 노선의 다른 비행기일 수 있어 합치지 않는다.
+    API가 실제 운항사를 알려주지 않으므로, 판매용 편명이 보통 더 길다는 점을 이용해
+    숫자 자릿수가 적은 편명을 대표로 하고 나머지는 codeshares에 담는다(같으면 원래 순서).
+    입력 순서(예정 시각 순)를 유지한다.
+    """
+    groups: dict[tuple, list[dict[str, Any]]] = {}
+    order: list[tuple] = []
+    for i, f in enumerate(flights):
+        if f["gate"]:
+            key = (
+                f["direction"],
+                f["scheduledTime"],
+                f["estimatedTime"],
+                f["counterpartCode"] or f["counterpart"],
+                f["gate"],
+                f["status"],
+            )
+        else:
+            key = ("single", i)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(f)
+
+    merged = []
+    for key in order:
+        group = sorted(groups[key], key=lambda f: _flight_digits(f["flightNo"]))
+        primary, others = group[0], group[1:]
+        merged.append(
+            {**primary, "codeshares": [{"flightNo": o["flightNo"], "airline": o["airline"]} for o in others]}
+        )
+    return merged
+

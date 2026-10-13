@@ -69,6 +69,40 @@ class StatusWindowTest(unittest.TestCase):
         self.assertEqual(flights.status_window(datetime(2026, 10, 12, 21, 0, tzinfo=KST)), ("2000", "2359"))
 
 
+def _flight(flight_no, airline, std="09:05", etd="09:23", gate="12", city="WJU", status="출발"):
+    return {
+        "flightNo": flight_no,
+        "airline": airline,
+        "direction": "departure",
+        "counterpart": "원주",
+        "counterpartCode": city,
+        "international": False,
+        "scheduledTime": std,
+        "estimatedTime": etd,
+        "status": status,
+        "gate": gate,
+    }
+
+
+class MergeCodesharesTest(unittest.TestCase):
+    def test_merges_same_aircraft_and_picks_operating_number(self):
+        # 2026-10-13 제주 출발 실측: 대한항공 KE5242 = 진에어 LJ472(같은 시각·게이트)
+        merged = flights.merge_codeshares(
+            [_flight("KE5242", "대한항공"), _flight("LJ472", "진에어"), _flight("BX8106", "에어부산", "09:10", None, "13", "PUS", "지연")]
+        )
+        self.assertEqual([f["flightNo"] for f in merged], ["LJ472", "BX8106"])
+        self.assertEqual(merged[0]["codeshares"], [{"flightNo": "KE5242", "airline": "대한항공"}])
+        self.assertEqual(merged[1]["codeshares"], [])
+
+    def test_keeps_separate_when_gate_unknown(self):
+        merged = flights.merge_codeshares([_flight("KE1001", "대한항공", gate=None), _flight("OZ8901", "아시아나항공", gate=None)])
+        self.assertEqual(len(merged), 2)
+
+    def test_keeps_separate_when_times_differ(self):
+        merged = flights.merge_codeshares([_flight("KE5242", "대한항공"), _flight("LJ472", "진에어", etd="09:30")])
+        self.assertEqual(len(merged), 2)
+
+
 class ParseFlightStatusTest(unittest.TestCase):
     def test_fields(self):
         items, total = flights.parse_flight_status(STATUS_XML)

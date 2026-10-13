@@ -22,6 +22,7 @@ export type FlightStatus = {
   estimatedTime: string | null // 변경 시각(예정과 같으면 null)
   status: string | null // 출발, 도착, 지연, 결항, 탑승중 …
   gate: string | null
+  codeshares: { flightNo: string; airline: string }[] // 같은 비행기의 공동운항 편명
 }
 
 export type FlightStatusResponse = {
