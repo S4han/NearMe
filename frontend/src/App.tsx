@@ -165,6 +165,7 @@ function App() {
           onSelectPlace={handleSelect}
           onCenterChange={setMapCenter}
           onUserMove={() => setMapMoved(true)}
+          fitExtra={sortByMe ? userLocation : null}
         />
       </div>
 

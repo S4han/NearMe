@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   APIProvider,
   AdvancedMarker,
@@ -15,6 +15,7 @@ import {
 } from '../config/maps'
 import type { LatLng } from '../types/location'
 import type { NearbyPlace } from '../types/place'
+import { clusterByPixel } from '../utils/cluster'
 
 type MapViewProps = {
   userLocation: LatLng | null
@@ -24,6 +25,7 @@ type MapViewProps = {
   onSelectPlace: (id: string) => void
   onCenterChange: (center: LatLng) => void
   onUserMove: () => void // 사용자가 지도를 직접 끌었을 때('이 지역 검색' 버튼 표시용)
+  fitExtra: LatLng | null // 결과 맞춤 때 함께 보이게 할 위치('내 위치에서 가까운 순'일 때 내 위치)
 }
 
 const isDesktop = () => window.matchMedia('(min-width: 768px)').matches
@@ -64,12 +66,21 @@ function fitPadding(): number | { top: number; right: number; bottom: number; le
 }
 
 // 새 검색 결과가 오면 검색 기준점과 결과가 모두 보이도록 화면 맞춤
-function FitToResults({ center, places }: { center: LatLng | null; places: NearbyPlace[] }) {
+function FitToResults({
+  center,
+  places,
+  extra,
+}: {
+  center: LatLng | null
+  places: NearbyPlace[]
+  extra: LatLng | null
+}) {
   const map = useMap()
   useEffect(() => {
     if (!map || !center || places.length === 0) return
-    const lats = [center.lat, ...places.map((p) => p.location.lat)]
-    const lngs = [center.lng, ...places.map((p) => p.location.lng)]
+    const points = [center, ...places.map((p) => p.location), ...(extra ? [extra] : [])]
+    const lats = points.map((p) => p.lat)
+    const lngs = points.map((p) => p.lng)
     map.fitBounds(
       {
         north: Math.max(...lats),
@@ -79,8 +90,76 @@ function FitToResults({ center, places }: { center: LatLng | null; places: Nearb
       },
       fitPadding(),
     )
-  }, [map, center, places])
+  }, [map, center, places, extra])
   return null
+}
+
+// 결과 마커. 화면에서 겹치는 마커는 '3곳' 묶음으로 보여주고, 누르면 묶인 장소가 다 보이도록 확대한다
+function PlaceMarkers({
+  places,
+  selectedId,
+  zoom,
+  onSelectPlace,
+}: {
+  places: NearbyPlace[]
+  selectedId: string | null
+  zoom: number
+  onSelectPlace: (id: string) => void
+}) {
+  const map = useMap()
+  const groups = clusterByPixel(places, (p) => p.location, zoom, (p) => p.id === selectedId)
+
+  const zoomInto = (members: NearbyPlace[]) => {
+    if (!map) return
+    const lats = members.map((p) => p.location.lat)
+    const lngs = members.map((p) => p.location.lng)
+    map.fitBounds(
+      { north: Math.max(...lats), south: Math.min(...lats), east: Math.max(...lngs), west: Math.min(...lngs) },
+      fitPadding(),
+    )
+  }
+
+  return (
+    <>
+      {groups.map((g) => {
+        if (g.kind === 'cluster') {
+          const members = g.members.map((m) => m.item)
+          return (
+            <AdvancedMarker
+              key={`cluster-${members.map((p) => p.id).join('-')}`}
+              position={g.position}
+              title={members.map((p, n) => `${g.members[n].index + 1}. ${p.name}`).join('\n')}
+              zIndex={500}
+              onClick={() => zoomInto(members)}
+            >
+              <span className="flex h-10 min-w-10 items-center justify-center rounded-full border-[3px] border-white bg-blue-600 px-2 text-sm font-bold text-white shadow-lg">
+                {members.length}곳
+              </span>
+            </AdvancedMarker>
+          )
+        }
+        const p = g.item
+        const isSelected = p.id === selectedId
+        return (
+          <AdvancedMarker
+            key={p.id}
+            position={p.location}
+            title={p.name}
+            zIndex={isSelected ? 1000 : g.index}
+            onClick={() => onSelectPlace(p.id)}
+          >
+            <Pin
+              background={isSelected ? '#dc2626' : '#2563eb'}
+              borderColor={isSelected ? '#991b1b' : '#1e40af'}
+              glyph={String(g.index + 1)}
+              glyphColor="#ffffff"
+              scale={isSelected ? 1.2 : 1}
+            />
+          </AdvancedMarker>
+        )
+      })}
+    </>
+  )
 }
 
 function MapView({
@@ -91,7 +170,9 @@ function MapView({
   onSelectPlace,
   onCenterChange,
   onUserMove,
+  fitExtra,
 }: MapViewProps) {
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const selectedPlace = places.find((p) => p.id === selectedId) ?? null
 
   if (!GOOGLE_MAPS_API_KEY) {
@@ -115,12 +196,15 @@ function MapView({
           defaultZoom={DEFAULT_ZOOM}
           gestureHandling="greedy"
           disableDefaultUI
-          onCameraChanged={(ev: MapCameraChangedEvent) => onCenterChange(ev.detail.center)}
+          onCameraChanged={(ev: MapCameraChangedEvent) => {
+            onCenterChange(ev.detail.center)
+            setZoom(ev.detail.zoom)
+          }}
           onDragstart={onUserMove}
           style={{ width: '100%', height: '100%' }}
         >
           <PanTo target={userLocation} />
-          <FitToResults center={searchCenter} places={places} />
+          <FitToResults center={searchCenter} places={places} extra={fitExtra} />
           <PanTo target={selectedPlace?.location ?? null} />
 
           {userLocation && (
@@ -138,26 +222,7 @@ function MapView({
             </AdvancedMarker>
           )}
 
-          {places.map((p, i) => {
-            const isSelected = p.id === selectedId
-            return (
-              <AdvancedMarker
-                key={p.id}
-                position={p.location}
-                title={p.name}
-                zIndex={isSelected ? 1000 : i}
-                onClick={() => onSelectPlace(p.id)}
-              >
-                <Pin
-                  background={isSelected ? '#dc2626' : '#2563eb'}
-                  borderColor={isSelected ? '#991b1b' : '#1e40af'}
-                  glyph={String(i + 1)}
-                  glyphColor="#ffffff"
-                  scale={isSelected ? 1.2 : 1}
-                />
-              </AdvancedMarker>
-            )
-          })}
+          <PlaceMarkers places={places} selectedId={selectedId} zoom={zoom} onSelectPlace={onSelectPlace} />
         </Map>
       </APIProvider>
     </div>
