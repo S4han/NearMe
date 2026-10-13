@@ -4,6 +4,7 @@
 실시간 현황은 공공데이터포털 인증키(DATA_GO_KR_SERVICE_KEY)가 필요하다. 주변 공항 검색은 키 없이 동작한다.
 """
 
+import re
 from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import unquote, urlencode
@@ -47,7 +48,8 @@ def _airport(code: str) -> dict[str, Any]:
 
 
 def _upstream_failed(e: Exception) -> HTTPException:
-    print(f"[flights] upstream error: {e!r}")
+    # 오류 메시지에 요청 URL이 들어가므로 인증키는 가리고 남긴다
+    print(f"[flights] upstream error: {re.sub(r'serviceKey=[^&)]+', 'serviceKey=***', repr(e))}")
     return HTTPException(status_code=502, detail="항공 운항정보 서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.")
 
 
