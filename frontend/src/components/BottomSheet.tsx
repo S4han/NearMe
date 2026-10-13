@@ -70,7 +70,7 @@ function BottomSheet({
       </div>
 
       <div
-        className={`${open ? 'block' : 'hidden'} max-h-[34vh] overflow-y-auto overscroll-contain border-t border-gray-100 px-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:block md:max-h-none md:flex-1`}
+        className={`${open ? 'block' : 'hidden'} max-h-[50dvh] overflow-y-auto overscroll-contain border-t border-gray-100 px-3 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:block md:max-h-none md:flex-1`}
       >
         {children}
       </div>

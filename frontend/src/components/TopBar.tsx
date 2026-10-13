@@ -8,31 +8,24 @@ type TopBarProps = {
   backendStatus?: BackendStatus // 없으면 Backend 상태 표시 숨김(Backend 미배포 환경)
 }
 
-const backendDot: Record<BackendStatus, string> = {
-  checking: 'bg-gray-300',
-  ok: 'bg-emerald-500',
-  error: 'bg-red-500',
-}
-
 function TopBar({ category, onCategoryChange, backendStatus }: TopBarProps) {
   return (
-    <div className="pointer-events-auto rounded-3xl bg-white/90 p-3 shadow-lg ring-1 ring-black/5 backdrop-blur-md">
+    <div className="pointer-events-auto rounded-3xl bg-white/90 p-2.5 shadow-lg ring-1 ring-black/5 backdrop-blur-md md:p-3">
       <div className="flex items-center justify-between px-1">
-        <h1 className="text-lg font-extrabold tracking-tight">
+        <h1 className="text-base font-extrabold tracking-tight md:text-lg">
           <span className="text-blue-600">Near</span>Me
         </h1>
-        {backendStatus && (
-          <span
-            className="flex items-center gap-1.5 text-[11px] text-gray-500"
-            title={`NearMe Backend: ${backendStatus}`}
-          >
-            <span className={`h-2 w-2 rounded-full ${backendDot[backendStatus]}`} />
-            Backend {backendStatus}
+        {/* 정상일 때는 숨기고, 서버에 연결되지 않을 때만 알린다 */}
+        {backendStatus === 'error' && (
+          <span className="flex items-center gap-1.5 text-[11px] text-red-600" title="NearMe Backend: error">
+            <span className="h-2 w-2 rounded-full bg-red-500" />
+            서버 연결 안 됨
           </span>
         )}
       </div>
 
-      <div className="-mx-3 mt-2 flex gap-2 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* 휴대폰에서도 8개가 한 번에 보이도록 4×2 격자(아이콘 위, 이름 아래) */}
+      <div className="mt-1.5 grid grid-cols-4 gap-1.5">
         {categories.map((c) => {
           const isSelected = c.id === category
           return (
@@ -41,14 +34,16 @@ function TopBar({ category, onCategoryChange, backendStatus }: TopBarProps) {
               type="button"
               onClick={() => onCategoryChange(c.id)}
               aria-pressed={isSelected}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition active:scale-95 ${
+              className={`flex min-w-0 flex-col items-center gap-0.5 rounded-2xl px-1 py-1.5 transition active:scale-95 ${
                 isSelected
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span aria-hidden="true">{c.icon}</span>
-              {c.name}
+              <span aria-hidden="true" className="text-lg leading-none">
+                {c.icon}
+              </span>
+              <span className="w-full truncate text-center text-[11px] font-medium">{c.name}</span>
             </button>
           )
         })}
