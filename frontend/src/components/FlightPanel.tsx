@@ -20,9 +20,9 @@ function statusColor(status: string | null): string {
   return 'bg-gray-100 text-gray-600'
 }
 
-function FlightRow({ f }: { f: FlightStatus }) {
+function FlightRow({ f, dim = false }: { f: FlightStatus; dim?: boolean }) {
   return (
-    <li className="flex items-center gap-3 py-2">
+    <li className={`flex items-center gap-3 py-2 ${dim ? 'opacity-50' : ''}`}>
       <span className="w-12 shrink-0 text-center">
         <span className={`block text-sm font-bold ${f.estimatedTime ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
           {f.scheduledTime}
@@ -51,12 +51,18 @@ function FlightRow({ f }: { f: FlightStatus }) {
   )
 }
 
+// 이미 출발(출발 탭)·도착(도착 탭)한 편. 결항·회항 등은 알아야 하므로 지난 편으로 숨기지 않는다
+function isDone(f: FlightStatus): boolean {
+  return f.status === (f.direction === 'departure' ? '출발' : '도착')
+}
+
 // 선택한 공항의 실시간 출발/도착 현황(한국공항공사)
 function FlightPanel({ airportCode }: { airportCode: string }) {
   const [direction, setDirection] = useState<FlightDirection>('departure')
   const [data, setData] = useState<FlightStatusResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPast, setShowPast] = useState(false)
   const reqSeq = useRef(0)
 
   const load = useCallback(async () => {
@@ -78,6 +84,7 @@ function FlightPanel({ airportCode }: { airportCode: string }) {
   // 처음 열 때·출발/도착 전환 시 조회하고, 열려 있는 동안 1분마다 갱신
   useEffect(() => {
     setData(null)
+    setShowPast(false)
     load()
     const timer = window.setInterval(load, AUTO_REFRESH_MS)
     return () => {
@@ -85,6 +92,10 @@ function FlightPanel({ airportCode }: { airportCode: string }) {
       reqSeq.current++ // 닫힌 뒤 도착한 응답 무시
     }
   }, [load])
+
+  const flights = data?.flights ?? []
+  const past = flights.filter(isDone)
+  const upcoming = flights.filter((f) => !isDone(f))
 
   const tabClass = (d: FlightDirection) =>
     `flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
@@ -124,15 +135,27 @@ function FlightPanel({ airportCode }: { airportCode: string }) {
         </div>
       )}
 
-      {data && data.flights.length === 0 && (
+      {past.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowPast((v) => !v)}
+          className="mb-1 w-full rounded-lg bg-gray-50 py-1.5 text-xs font-semibold text-gray-500"
+        >
+          {showPast ? '지난 항공편 숨기기 ▼' : `지난 항공편 ${past.length}편 보기 ▲`}
+        </button>
+      )}
+
+      {data && upcoming.length === 0 && !showPast && (
         <p className="py-3 text-center text-xs text-gray-500">
           지금부터 6시간 안에 {direction === 'departure' ? '출발' : '도착'} 예정인 항공편이 없습니다.
         </p>
       )}
 
-      {data && data.flights.length > 0 && (
+      {data && (upcoming.length > 0 || showPast) && (
         <ul className="max-h-80 divide-y divide-gray-100 overflow-y-auto">
-          {data.flights.map((f) => (
+          {showPast &&
+            past.map((f) => <FlightRow key={`${f.flightNo}-${f.scheduledTime}`} f={f} dim />)}
+          {upcoming.map((f) => (
             <FlightRow key={`${f.flightNo}-${f.scheduledTime}`} f={f} />
           ))}
         </ul>

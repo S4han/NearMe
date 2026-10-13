@@ -190,6 +190,7 @@ function App() {
           subtitle={subtitle}
           radius={radius}
           onRadiusChange={handleRadiusChange}
+          showRadius={!(category === 'airport' && BACKEND_ENABLED)}
           onLocate={locate}
           locating={geoStatus === 'locating'}
         >
