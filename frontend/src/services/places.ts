@@ -6,6 +6,7 @@ type SearchParams = {
   center: LatLng
   radius: number
   types: readonly string[]
+  rank: 'popularity' | 'distance'
 }
 
 // 비용 통제: 목록 표시에 필요한 최소 필드만 요청한다(Nearby Search Pro 등급).
@@ -23,6 +24,7 @@ export async function searchNearbyPlaces({
   center,
   radius,
   types,
+  rank,
 }: SearchParams): Promise<NearbyPlace[]> {
   const { Place, SearchNearbyRankPreference } = await loadPlacesLibrary()
 
@@ -31,8 +33,9 @@ export async function searchNearbyPlaces({
     locationRestriction: { center, radius },
     includedTypes: [...types],
     maxResultCount: MAX_RESULTS,
-    // 반경 안에서 검색 기준점에 가장 가까운 장소부터 받는다
-    rankPreference: SearchNearbyRankPreference.DISTANCE,
+    // 최대 20곳만 받으므로 어떤 20곳을 받을지 카테고리별로 고른다(config/categories.ts의 rank)
+    rankPreference:
+      rank === 'popularity' ? SearchNearbyRankPreference.POPULARITY : SearchNearbyRankPreference.DISTANCE,
   })
 
   const result: NearbyPlace[] = places.flatMap((p) => {
