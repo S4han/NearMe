@@ -16,6 +16,7 @@ import { useGeolocation, type GeoStatus } from './hooks/useGeolocation'
 import { distanceMeters, searchNearbyPlaces } from './services/places'
 import { isInJeju, searchNearbyBusStations } from './services/bus'
 import { AIRPORT_SEARCH_RADIUS, searchNearbyAirports } from './services/flights'
+import { onBackendResponse } from './services/api'
 import type { LatLng } from './types/location'
 import type { NearbyPlace } from './types/place'
 
@@ -51,10 +52,46 @@ function App() {
 
   useEffect(() => {
     if (!BACKEND_ENABLED) return
-    fetch(`${API_BASE_URL}/api/health`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((data: { status?: string }) => setBackendStatus(data.status === 'ok' ? 'ok' : 'error'))
-      .catch(() => setBackendStatus('error'))
+    // 휴대폰 회선이 잠깐 끊기거나 Cloud Run이 깨어나는 중이면 첫 확인이 실패할 수 있다.
+    // 실패하면 점점 간격을 늘려 다시 확인하고, 화면 복귀·네트워크 복구·다른 Backend 호출 성공 때도 갱신한다
+    const RETRY_MS = [3_000, 10_000, 30_000, 60_000]
+    let attempt = 0
+    let timer: number | undefined
+    let alive = true
+
+    const check = () => {
+      window.clearTimeout(timer)
+      fetch(`${API_BASE_URL}/api/health`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+        .then((data: { status?: string }) => {
+          if (data.status !== 'ok') throw new Error('unhealthy')
+          if (!alive) return
+          attempt = 0
+          setBackendStatus('ok')
+        })
+        .catch(() => {
+          if (!alive) return
+          setBackendStatus('error')
+          timer = window.setTimeout(check, RETRY_MS[Math.min(attempt++, RETRY_MS.length - 1)])
+        })
+    }
+    const onVisible = () => document.visibilityState === 'visible' && check()
+
+    check()
+    window.addEventListener('online', check)
+    document.addEventListener('visibilitychange', onVisible)
+    const unsubscribe = onBackendResponse(() => {
+      window.clearTimeout(timer)
+      attempt = 0
+      setBackendStatus('ok')
+    })
+    return () => {
+      alive = false
+      window.clearTimeout(timer)
+      window.removeEventListener('online', check)
+      document.removeEventListener('visibilitychange', onVisible)
+      unsubscribe()
+    }
   }, [])
 
   // 내 위치로 이동하면 이후 카테고리/반경 검색은 새 위치(이동한 지도 중심) 기준으로 한다
